@@ -1,9 +1,27 @@
-﻿import React from "react";
-import { Link } from "react-router-dom";
+import React from "react";
+import { useNavigate } from "react-router-dom";
 
 function ItemCard({ item }) {
+  const navigate = useNavigate();
+
+  const goToDetails = () => {
+    navigate(`/item/${item.id}`);
+  };
+
   return (
-    <Link to={`/item/${item.id}`} className="listing-card">
+    <div
+      className="listing-card item-card"
+      role="button"
+      tabIndex={0}
+      aria-label={`View details for ${item.name}`}
+      onClick={goToDetails}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          goToDetails();
+        }
+      }}
+    >
       <div className={`listing-image ${item.imageClass}`}></div>
       <div className="listing-top">
         <span>{item.pricePerDay}</span>
@@ -11,7 +29,20 @@ function ItemCard({ item }) {
       </div>
       <h3>{item.name}</h3>
       <p>{item.location}</p>
-    </Link>
+
+      <div className="item-quick-action">
+        <button
+          type="button"
+          className="btn primary quick-view-btn"
+          onClick={(e) => {
+            e.stopPropagation();
+            goToDetails();
+          }}
+        >
+          View Details
+        </button>
+      </div>
+    </div>
   );
 }
 

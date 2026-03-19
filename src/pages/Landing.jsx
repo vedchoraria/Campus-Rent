@@ -1,4 +1,7 @@
-﻿import React from "react";
+import React from "react";
+import { Link } from "react-router-dom";
+import ItemCard from "../components/ItemCard.jsx";
+import mockData from "../data/mockData.js";
 
 function Landing() {
   return (
@@ -16,8 +19,12 @@ function Landing() {
             verified profiles and escrow-backed payments.
           </p>
           <div className="hero-cta">
-            <button className="btn primary">Explore Marketplace</button>
-            <button className="btn secondary">Lend Your Gear</button>
+            <Link to="/marketplace" className="btn primary">
+              Explore Marketplace
+            </Link>
+            <Link to="/add" className="btn secondary">
+              Lend Your Gear
+            </Link>
           </div>
           <div className="hero-proof">
             <div className="avatars">
@@ -161,42 +168,9 @@ function Landing() {
           <p>Highly rated gear from students you can trust.</p>
         </div>
         <div className="grid four">
-          <div className="listing-card">
-            <div className="listing-image purple"></div>
-            <div className="listing-top">
-              <span>$10/day</span>
-              <span>4.9 star</span>
-            </div>
-            <h3>Canon EOS M50</h3>
-            <p>Photography kit, 2 miles away</p>
-          </div>
-          <div className="listing-card">
-            <div className="listing-image teal"></div>
-            <div className="listing-top">
-              <span>$4/day</span>
-              <span>4.8 star</span>
-            </div>
-            <h3>Noise Cancelling Headphones</h3>
-            <p>Tech and audio, 0.5 miles away</p>
-          </div>
-          <div className="listing-card">
-            <div className="listing-image blue"></div>
-            <div className="listing-top">
-              <span>$15/day</span>
-              <span>4.7 star</span>
-            </div>
-            <h3>DJI Mini Drone</h3>
-            <p>Media lab, 1.2 miles away</p>
-          </div>
-          <div className="listing-card">
-            <div className="listing-image coral"></div>
-            <div className="listing-top">
-              <span>$14/day</span>
-              <span>4.9 star</span>
-            </div>
-            <h3>Foldable Kayak</h3>
-            <p>Outdoor club, 0.9 miles away</p>
-          </div>
+          {mockData.slice(0, 4).map((item) => (
+            <ItemCard key={item.id} item={item} />
+          ))}
         </div>
       </section>
 
