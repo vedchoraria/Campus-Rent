@@ -1,0 +1,68 @@
+﻿const mockData = [
+  {
+    id: "canon-eos-m50",
+    name: "Canon EOS M50",
+    pricePerDay: "$10/day",
+    rating: "4.9",
+    location: "Photography kit, 2 miles away",
+    imageClass: "purple",
+  },
+  {
+    id: "noise-cancelling-headphones",
+    name: "Noise Cancelling Headphones",
+    pricePerDay: "$4/day",
+    rating: "4.8",
+    location: "Tech and audio, 0.5 miles away",
+    imageClass: "teal",
+  },
+  {
+    id: "dji-mini-drone",
+    name: "DJI Mini Drone",
+    pricePerDay: "$15/day",
+    rating: "4.7",
+    location: "Media lab, 1.2 miles away",
+    imageClass: "blue",
+  },
+  {
+    id: "foldable-kayak",
+    name: "Foldable Kayak",
+    pricePerDay: "$14/day",
+    rating: "4.9",
+    location: "Outdoor club, 0.9 miles away",
+    imageClass: "coral",
+  },
+  {
+    id: "macbook-air",
+    name: "MacBook Air",
+    pricePerDay: "$12/day",
+    rating: "4.8",
+    location: "Engineering lab, 1.1 miles away",
+    imageClass: "purple",
+  },
+  {
+    id: "study-projector",
+    name: "Mini Projector",
+    pricePerDay: "$7/day",
+    rating: "4.7",
+    location: "Study lounge, 0.3 miles away",
+    imageClass: "teal",
+  },
+  {
+    id: "camping-kit",
+    name: "Camping Kit",
+    pricePerDay: "$9/day",
+    rating: "4.9",
+    location: "Outdoor club, 0.7 miles away",
+    imageClass: "coral",
+  },
+  {
+    id: "gaming-console",
+    name: "Switch Console",
+    pricePerDay: "$6/day",
+    rating: "4.8",
+    location: "Residence hall, 0.2 miles away",
+    imageClass: "blue",
+  },
+];
+
+export default mockData;
