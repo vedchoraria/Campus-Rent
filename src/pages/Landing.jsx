@@ -1,9 +1,38 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import ItemCard from "../components/ItemCard.jsx";
 import mockData from "../data/mockData.js";
 
+const dynamicWords = ["Classmates.", "Friends.", "Dorm Neighbors.", "Study Groups."];
+
 function Landing() {
+  const [wordIndex, setWordIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setWordIndex((prev) => (prev + 1) % dynamicWords.length);
+    }, 2800);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("visible");
+          }
+        });
+      },
+      { threshold: 0.1, rootMargin: "0px 0px -50px 0px" }
+    );
+
+    const elements = document.querySelectorAll(".reveal");
+    elements.forEach((el) => observer.observe(el));
+
+    return () => elements.forEach((el) => observer.unobserve(el));
+  }, []);
+
   return (
     <>
       <section id="home" className="hero">
@@ -11,7 +40,9 @@ function Landing() {
           <div className="pill">Exclusive to your student network</div>
           <h1>
             Rent From Peers,
-            <span>Lend to Classmates.</span>
+            <span key={wordIndex} className="dynamic-text">
+              Lend to {dynamicWords[wordIndex]}
+            </span>
           </h1>
           <p className="subtext">
             CampusRent powers a trusted campus rental economy. Borrow what you
@@ -34,7 +65,7 @@ function Landing() {
             </div>
             <div className="proof-text">Verified by university email</div>
           </div>
-          <div className="hero-stats">
+          <div className="hero-stats reveal">
             <div>
               <strong>12k+</strong>
               <span>Active students</span>
@@ -57,7 +88,7 @@ function Landing() {
               <p>Pickup windows coordinated with your schedule.</p>
             </div>
           </div>
-          <div className="stack">
+          <div className="stack reveal" style={{ transitionDelay: "200ms" }}>
             <div className="glass-card">
               <div className="card-badge">University Hub</div>
               <h3>Find your campus circle</h3>
@@ -74,7 +105,7 @@ function Landing() {
         </div>
       </section>
 
-      <section className="features" id="marketplace">
+      <section className="features reveal" id="marketplace">
         <div className="section-head">
           <p className="eyebrow">Why CampusRent</p>
           <h2>Everything you need to rent smarter</h2>
@@ -99,7 +130,7 @@ function Landing() {
         </div>
       </section>
 
-      <section className="seller" id="listing">
+      <section className="seller reveal" id="listing">
         <div className="seller-content">
           <h2>Got Gear Sitting in Your Dorm?</h2>
           <p>
@@ -133,7 +164,7 @@ function Landing() {
         </div>
       </section>
 
-      <section className="categories">
+      <section className="categories reveal">
         <div className="section-head row">
           <div>
             <p className="eyebrow">Curated collections</p>
@@ -161,7 +192,7 @@ function Landing() {
         </div>
       </section>
 
-      <section className="listings">
+      <section className="listings reveal">
         <div className="section-head">
           <p className="eyebrow">Fresh from the dorms</p>
           <h2>Featured listings</h2>
@@ -174,7 +205,7 @@ function Landing() {
         </div>
       </section>
 
-      <section className="trust" id="chat">
+      <section className="trust reveal" id="chat">
         <div className="trust-media"></div>
         <div className="trust-content">
           <p className="eyebrow">Built for the trusted campus circle</p>
@@ -196,7 +227,7 @@ function Landing() {
         </div>
       </section>
 
-      <section className="cta">
+      <section className="cta reveal">
         <div className="cta-card">
           <div>
             <h2>Ready to join your campus circle?</h2>
