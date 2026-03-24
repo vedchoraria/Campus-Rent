@@ -1,5 +1,6 @@
 import React from "react";
-import { Route, Routes, useLocation } from "react-router-dom";
+import { Route, Routes, useLocation, Navigate } from "react-router-dom";
+import { useAuth } from "./context/AuthContext.jsx";
 import Navbar from "./components/Navbar.jsx";
 import Footer from "./components/Footer.jsx";
 import Landing from "./pages/Landing.jsx";
@@ -11,6 +12,14 @@ import Chat from "./pages/Chat.jsx";
 import Login from "./pages/Login.jsx";
 import Signup from "./pages/Signup.jsx";
 
+function ProtectedRoute({ children }) {
+  const { user } = useAuth();
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  return children;
+}
+
 function App() {
   const location = useLocation();
 
@@ -21,13 +30,13 @@ function App() {
         <div key={location.pathname} className="page-transition">
           <Routes location={location}>
             <Route path="/" element={<Landing />} />
-            <Route path="/marketplace" element={<Marketplace />} />
-            <Route path="/item/:id" element={<ItemDetails />} />
-            <Route path="/add" element={<AddListing />} />
-            <Route path="/booking" element={<Booking />} />
-            <Route path="/chat" element={<Chat />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/marketplace" element={<ProtectedRoute><Marketplace /></ProtectedRoute>} />
+            <Route path="/item/:id" element={<ProtectedRoute><ItemDetails /></ProtectedRoute>} />
+            <Route path="/add" element={<ProtectedRoute><AddListing /></ProtectedRoute>} />
+            <Route path="/booking" element={<ProtectedRoute><Booking /></ProtectedRoute>} />
+            <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
           </Routes>
         </div>
       </main>

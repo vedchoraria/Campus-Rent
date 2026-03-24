@@ -1,8 +1,33 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext.jsx";
 
 function Login() {
   const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const { login } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogin = () => {
+    setError("");
+    if (!email || !password) {
+      setError("Email and password are required.");
+      return;
+    }
+
+    if (!email.toLowerCase().endsWith("@nitrr.ac.in")) {
+      setError("Please login using your @nitrr.ac.in campus email.");
+      return;
+    }
+
+    const name = email.split("@")[0] || "Student";
+    const initials = name.substring(0, 2).toUpperCase();
+    login({ name, email, initials });
+    navigate("/marketplace");
+  };
+
   return (
     <section className="auth-page">
       <div className="auth-tabs" role="tablist" aria-label="Authentication">
@@ -19,6 +44,13 @@ function Login() {
           <h1>Welcome back!</h1>
           <p>The campus marketplace is waiting for you.</p>
         </div>
+
+        {error && (
+          <div className="auth-error" style={{ color: '#ef4444', background: '#fee2e2', padding: '10px 14px', borderRadius: '8px', fontSize: '13px', marginBottom: '16px', border: '1px solid #f87171' }}>
+            {error}
+          </div>
+        )}
+
         <form className="auth-form">
           <label className="auth-label" htmlFor="login-email">
             Student Email
@@ -27,7 +59,10 @@ function Login() {
             <input
               id="login-email"
               type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="name@university.edu"
+              required
             />
           </div>
 
@@ -43,7 +78,10 @@ function Login() {
             <input
               id="login-password"
               type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               placeholder="********"
+              required
             />
             <span 
               className="auth-eye" 
@@ -55,7 +93,7 @@ function Login() {
             </span>
           </div>
 
-          <button className="btn primary auth-submit" type="button">
+          <button onClick={handleLogin} className="btn primary auth-submit" type="button">
             Enter the Hub
           </button>
         </form>

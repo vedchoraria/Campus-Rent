@@ -996,6 +996,116 @@ section {
   gap: 12px;
 }
 
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.nav-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.nav-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.nav-username {
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--text-dark);
+}
+
+.nav-icon-btn {
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  transition: background 0.2s;
+  display: grid;
+  place-items: center;
+}
+.nav-icon-btn:hover {
+  background: var(--bg);
+}
+
+.profile-dropdown-wrapper {
+  position: relative;
+}
+
+.nav-profile-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  padding: 4px 14px 4px 4px;
+  border-radius: 30px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: box-shadow 0.2s;
+}
+.nav-profile-btn:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.profile-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  background: var(--surface);
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+  border: 1px solid var(--border);
+  width: 200px;
+  padding: 8px 0;
+  display: none;
+  flex-direction: column;
+  z-index: 50;
+}
+
+.profile-dropdown-wrapper:hover .profile-dropdown-menu,
+.profile-dropdown-wrapper:focus-within .profile-dropdown-menu {
+  display: flex;
+  animation: authPopIn 0.2s ease-out forwards;
+}
+
+.dropdown-item {
+  padding: 10px 20px;
+  color: var(--text);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  background: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+}
+.dropdown-item:hover {
+  background: var(--bg);
+}
+.dropdown-divider {
+  margin: 6px 0;
+  border: 0;
+  height: 1px;
+  background: var(--border);
+}
+.text-danger {
+  color: #ef4444;
+}
+
 .chat-status {
   display: block;
   font-size: 11px;
@@ -2811,6 +2921,14 @@ section {
 .auth-benefit-card p {
   font-size: 12px;
   color: var(--muted);
+}
+
+.booking-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+  max-width: 1000px;
+  margin: 0 auto;
 }
 
 @media (max-width: 900px) {

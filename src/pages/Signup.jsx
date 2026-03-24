@@ -1,8 +1,39 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext.jsx";
 
 function Signup() {
   const [showPassword, setShowPassword] = useState(false);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const { login } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignup = () => {
+    setError("");
+    if (!name || !email || !password) {
+      setError("All fields are required.");
+      return;
+    }
+    
+    if (!email.toLowerCase().endsWith("@nitrr.ac.in")) {
+      setError("You must use a valid @nitrr.ac.in campus email address.");
+      return;
+    }
+
+    const pwdRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/;
+    if (!pwdRegex.test(password)) {
+      setError("Password must be at least 8 characters and include a number and a special character.");
+      return;
+    }
+
+    const initials = name.substring(0, 2).toUpperCase();
+    login({ name, email, initials });
+    navigate("/marketplace");
+  };
+
   return (
     <section className="auth-page">
       <div className="auth-tabs" role="tablist" aria-label="Authentication">
@@ -19,12 +50,26 @@ function Signup() {
           <h1>Join CampusRent</h1>
           <p>Create your student account to unlock the marketplace.</p>
         </div>
+
+        {error && (
+          <div className="auth-error" style={{ color: '#ef4444', background: '#fee2e2', padding: '10px 14px', borderRadius: '8px', fontSize: '13px', marginBottom: '16px', border: '1px solid #f87171' }}>
+            {error}
+          </div>
+        )}
+
         <form className="auth-form">
           <label className="auth-label" htmlFor="signup-name">
             Full Name
           </label>
           <div className="auth-field">
-            <input id="signup-name" type="text" placeholder="Alex Johnson" />
+            <input
+              id="signup-name"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Alex Johnson"
+              required
+            />
           </div>
 
           <label className="auth-label" htmlFor="signup-email">
@@ -34,7 +79,10 @@ function Signup() {
             <input
               id="signup-email"
               type="email"
-              placeholder="name@university.edu"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="name@nitrr.ac.in"
+              required
             />
           </div>
 
@@ -45,10 +93,13 @@ function Signup() {
             <input
               id="signup-password"
               type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               placeholder="Create a password"
+              required
             />
-            <span 
-              className="auth-eye" 
+            <span
+              className="auth-eye"
               aria-hidden="true"
               onClick={() => setShowPassword(!showPassword)}
               style={{ cursor: "pointer", userSelect: "none" }}
@@ -57,7 +108,7 @@ function Signup() {
             </span>
           </div>
 
-          <button className="btn primary auth-submit" type="button">
+          <button onClick={handleSignup} className="btn primary auth-submit" type="button">
             Create Account
           </button>
           <p className="auth-terms">
