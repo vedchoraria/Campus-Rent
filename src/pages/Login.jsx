@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 
 function Login() {
+  const [showPassword, setShowPassword] = useState(false);
   return (
     <section className="auth-page">
       <div className="auth-tabs" role="tablist" aria-label="Authentication">
@@ -41,11 +42,16 @@ function Login() {
           <div className="auth-field auth-password">
             <input
               id="login-password"
-              type="password"
+              type={showPassword ? "text" : "password"}
               placeholder="********"
             />
-            <span className="auth-eye" aria-hidden="true">
-              Show
+            <span 
+              className="auth-eye" 
+              aria-hidden="true"
+              onClick={() => setShowPassword(!showPassword)}
+              style={{ cursor: "pointer", userSelect: "none" }}
+            >
+              {showPassword ? "Hide" : "Show"}
             </span>
           </div>
 

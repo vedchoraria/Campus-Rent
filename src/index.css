@@ -311,6 +311,7 @@ input {
   min-height: 280px;
   overflow: hidden;
   box-shadow: var(--shadow);
+  animation: subtleFloat 6s ease-in-out infinite;
 }
 
 .image-card.large {
@@ -364,6 +365,7 @@ input {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  animation: subtleFloat 7s ease-in-out infinite;
 }
 
 .glass-card.mini {
@@ -371,6 +373,7 @@ input {
   align-items: center;
   gap: 14px;
   min-height: 120px;
+  animation-delay: 1.5s;
 }
 
 .card-badge {
@@ -1204,6 +1207,7 @@ section {
   border: 1px solid var(--border);
   position: relative;
   z-index: 1;
+  animation: authPopIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .auth-header {
@@ -1371,7 +1375,13 @@ section {
   padding: 14px 16px;
   box-shadow: var(--shadow);
   border: 1px solid rgba(255, 255, 255, 0.7);
+  opacity: 0;
+  animation: staggerUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+.auth-feature:nth-child(1) { animation-delay: 150ms; }
+.auth-feature:nth-child(2) { animation-delay: 250ms; }
+.auth-feature:nth-child(3) { animation-delay: 350ms; }
 
 .auth-feature strong {
   display: block;
@@ -2827,4 +2837,19 @@ section {
     flex-direction: column;
     gap: 8px;
   }
+}
+
+@keyframes authPopIn {
+  0% { opacity: 0; transform: scale(0.96) translateY(20px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes staggerUp {
+  0% { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes subtleFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
 }
