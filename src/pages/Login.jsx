@@ -17,8 +17,8 @@ function Login() {
       return;
     }
 
-    if (!email.toLowerCase().endsWith("@nitrr.ac.in")) {
-      setError("Please login using your @nitrr.ac.in campus email.");
+    if (!email.toLowerCase().endsWith("nitrr.ac.in")) {
+      setError("Please login using your nitrr.ac.in campus email.");
       return;
     }
 

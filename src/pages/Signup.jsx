@@ -18,8 +18,8 @@ function Signup() {
       return;
     }
     
-    if (!email.toLowerCase().endsWith("@nitrr.ac.in")) {
-      setError("You must use a valid @nitrr.ac.in campus email address.");
+    if (!email.toLowerCase().endsWith("nitrr.ac.in")) {
+      setError("You must use a valid nitrr.ac.in campus email address.");
       return;
     }
 
