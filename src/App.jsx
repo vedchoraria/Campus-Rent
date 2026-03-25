@@ -35,7 +35,7 @@ function App() {
             <Route path="/marketplace" element={<ProtectedRoute><Marketplace /></ProtectedRoute>} />
             <Route path="/item/:id" element={<ProtectedRoute><ItemDetails /></ProtectedRoute>} />
             <Route path="/add" element={<ProtectedRoute><AddListing /></ProtectedRoute>} />
-            <Route path="/booking" element={<ProtectedRoute><Booking /></ProtectedRoute>} />
+            <Route path="/booking/:id" element={<ProtectedRoute><Booking /></ProtectedRoute>} />
             <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
           </Routes>
         </div>

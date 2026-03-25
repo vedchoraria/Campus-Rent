@@ -1,92 +1,163 @@
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
+import mockData from "../data/mockData.js";
+import BookingForm from "../components/BookingForm.jsx";
+import PriceBreakdown from "../components/PriceBreakdown.jsx";
+import { checkAvailability } from "../utils/bookingUtils.js";
 
 function Booking() {
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const stateContext = location.state || {};
+  
+  const item = mockData.find((entry) => String(entry.id) === String(id));
 
-  const pricePerDay = 15;
+  const [startDate, setStartDate] = useState(stateContext.startDate || "");
+  const [endDate, setEndDate] = useState(stateContext.endDate || "");
+  const [error, setError] = useState("");
 
-  const calculateTotal = () => {
+  useEffect(() => {
+    if (!startDate) {
+      const today = new Date().toISOString().split('T')[0];
+      setStartDate(today);
+    }
+  }, [startDate]);
+
+  if (!item) {
+    return (
+      <section className="page" style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+        <h2 style={{ fontSize: '32px', marginBottom: '16px' }}>Item not found</h2>
+        <p style={{ color: 'var(--muted)', marginBottom: '24px' }}>Cannot proceed with booking. This item may have been removed.</p>
+        <button onClick={() => navigate('/marketplace')} className="btn primary">
+          Back to Marketplace
+        </button>
+      </section>
+    );
+  }
+
+  const calculateTotalDays = () => {
     if (!startDate || !endDate) return 0;
     const d1 = new Date(startDate);
     const d2 = new Date(endDate);
-    const diffTime = d2 - d1;
-    let diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    if (diffDays <= 0) diffDays = 1; 
-    return diffDays * pricePerDay;
+    
+    // Normalize to midnight
+    d1.setHours(0, 0, 0, 0);
+    d2.setHours(0, 0, 0, 0);
+
+    const diffTime = d2.getTime() - d1.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    // Same day is 1 day (inclusive logic)
+    return diffDays >= 0 ? diffDays + 1 : 0;
   };
 
-  const total = calculateTotal();
+  const validateDates = (start, end) => {
+    setError("");
+    if (start && end) {
+      const d1 = new Date(start);
+      const d2 = new Date(end);
+      d1.setHours(0, 0, 0, 0);
+      d2.setHours(0, 0, 0, 0);
+      if (d2 < d1) {
+        setError("Return date cannot be before pickup date.");
+        return false;
+      }
+
+      const availability = checkAvailability(start, end, item.bookings);
+      if (!availability.isAvailable) {
+        setError(`Item is already booked from ${availability.conflict.start} to ${availability.conflict.end}.`);
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const handleStartChange = (val) => {
+    setStartDate(val);
+    validateDates(val, endDate);
+  };
+
+  const handleEndChange = (val) => {
+    setEndDate(val);
+    validateDates(startDate, val);
+  };
+
+  const totalDays = calculateTotalDays();
+  const totalItemPrice = totalDays * item.pricePerDay;
+  const serviceFee = totalDays > 0 ? 50 : 0; // Fixed Campus Fee ₹50
+  const finalTotal = totalItemPrice + serviceFee;
+  const isValid = totalDays > 0 && !error;
 
   const handleConfirm = () => {
-    if (total > 0) {
-      navigate("/chat");
+    if (isValid) {
+      // Mock Persistence: Save the booking explicitly in memory so it reflects instantly for overlap logic
+      if (!item.bookings) {
+        item.bookings = [];
+      }
+      item.bookings.push({ start: startDate, end: endDate });
+
+      navigate("/chat", { state: { bookingRef: `REQ-${Date.now()}` } });
     }
   };
 
+  const handleCancel = () => {
+    navigate(-1);
+  };
+
   return (
-    <section className="page-section">
-      <div className="section-head">
-        <p className="eyebrow">Booking</p>
-        <h2>Confirm your campus pickup</h2>
-        <p>Select your dates to coordinate handoff times with verified students.</p>
+    <section className="page" style={{ paddingTop: '24px' }}>
+      
+      <div style={{ marginBottom: '32px' }}>
+        <button onClick={() => navigate(-1)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--primary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '16px' }}>
+          <span>←</span> Back
+        </button>
+        <h1 style={{ fontSize: '32px', fontFamily: '"Space Grotesk", sans-serif', marginTop: '8px' }}>Confirm Your Reservation</h1>
+        <p style={{ color: 'var(--muted)', fontSize: '16px', marginTop: '8px' }}>Review the final details before securing this rental.</p>
       </div>
 
-      <div className="booking-grid">
-        <div className="booking-form page-panel">
-          <h3>Select Dates</h3>
-          <div className="auth-row" style={{ marginTop: '24px', gap: '16px' }}>
-            <div style={{ flex: 1 }}>
-              <label className="auth-label">Pickup Date</label>
-              <div className="auth-field">
-                <input 
-                  type="date" 
-                  value={startDate} 
-                  onChange={(e) => setStartDate(e.target.value)} 
-                />
-              </div>
-            </div>
-            <div style={{ flex: 1 }}>
-              <label className="auth-label">Return Date</label>
-              <div className="auth-field">
-                <input 
-                  type="date" 
-                  value={endDate} 
-                  onChange={(e) => setEndDate(e.target.value)} 
-                  min={startDate}
-                />
+      <div className="booking-layout" style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 400px) minmax(0, 1fr)', gap: '48px', alignItems: 'start' }}>
+        
+        {/* Left: Item Summary Card */}
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', overflow: 'hidden', boxShadow: 'var(--shadow)', position: 'sticky', top: '100px' }}>
+          <div className={`marketplace-card-media ${item.images?.[0] || item.imageClass || 'purple'}`} style={{ aspectRatio: '16/9' }}></div>
+          <div style={{ padding: '24px' }}>
+            <h3 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '8px' }}>{item.title}</h3>
+            <p style={{ color: 'var(--muted)', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '16px' }}>
+              📍 {item.location}
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', background: 'var(--bg)', borderRadius: '12px' }}>
+              <span style={{ fontWeight: 600 }}>Rate</span>
+              <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--primary)' }}>
+                ₹{item.pricePerDay} <span style={{ fontSize: '14px', color: 'var(--muted)', fontWeight: 400 }}>/ day</span>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="booking-summary page-panel">
-          <h3>Order Summary</h3>
-          <div className="summary-row" style={{ display: 'flex', justifyContent: 'space-between', margin: '16px 0', color: 'var(--text)' }}>
-            <span>$15.00 x {total / pricePerDay || 0} days</span>
-            <span>${total.toFixed(2)}</span>
-          </div>
-          <div className="summary-row" style={{ display: 'flex', justifyContent: 'space-between', margin: '16px 0', color: 'var(--text)' }}>
-            <span>Campus Service Fee</span>
-            <span>$2.50</span>
-          </div>
-          <hr style={{ borderColor: 'var(--border)', margin: '16px 0' }} />
-          <div className="summary-row" style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '18px' }}>
-            <span>Total</span>
-            <span>${total > 0 ? (total + 2.50).toFixed(2) : "0.00"}</span>
-          </div>
-          <button 
-            className="btn primary" 
-            style={{ width: '100%', marginTop: '24px', opacity: total === 0 ? 0.5 : 1 }}
-            onClick={handleConfirm}
-            disabled={total === 0}
-          >
-            Confirm & Message
-          </button>
+        {/* Right: Booking Form & Invoice Output */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          <BookingForm 
+            startDate={startDate} 
+            endDate={endDate} 
+            onStartChange={handleStartChange} 
+            onEndChange={handleEndChange} 
+            error={error} 
+            totalDays={totalDays} 
+          />
+          <PriceBreakdown 
+            totalDays={totalDays}
+            pricePerDay={item.pricePerDay}
+            serviceFee={serviceFee}
+            finalTotal={finalTotal}
+            isValid={isValid}
+            onConfirm={handleConfirm}
+            onCancel={handleCancel}
+            primaryText="Confirm Booking"
+          />
         </div>
       </div>
+
     </section>
   );
 }

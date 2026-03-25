@@ -8,12 +8,17 @@ function ItemCard({ item }) {
     navigate(`/item/${item.id}`);
   };
 
+  const title = item.title || item.name;
+  const priceDisplay = item.pricePerDay ? `₹${item.pricePerDay} ` : "";
+  const numReviews = item.reviewsCount ? `(${item.reviewsCount})` : "(0)";
+  const badgeLabel = item.isVerified ? "Verified" : "Featured";
+
   return (
-    <div
-      className="listing-card item-card"
+    <article
+      className="marketplace-card"
       role="button"
       tabIndex={0}
-      aria-label={`View details for ${item.name}`}
+      aria-label={`View details for ${title}`}
       onClick={goToDetails}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -22,27 +27,50 @@ function ItemCard({ item }) {
         }
       }}
     >
-      <div className={`listing-image ${item.imageClass}`}></div>
-      <div className="listing-top">
-        <span>{item.pricePerDay}</span>
-        <span>{item.rating} star</span>
+      <div className={`marketplace-card-media ${item.images?.[0] || 'purple'}`}>
+        <span className="marketplace-card-badge">{badgeLabel}</span>
       </div>
-      <h3>{item.name}</h3>
-      <p>{item.location}</p>
+      
+      <div className="marketplace-card-body">
+        <h3 className="marketplace-card-title">{title}</h3>
+        <div className="marketplace-card-location">
+          <span>📍</span> {item.location}
+        </div>
 
-      <div className="item-quick-action">
-        <button
-          type="button"
-          className="btn primary quick-view-btn"
-          onClick={(e) => {
-            e.stopPropagation();
-            goToDetails();
-          }}
-        >
-          View Details
-        </button>
+        <div className="marketplace-card-price-row">
+          <div className="marketplace-card-price">
+            {priceDisplay}
+            {item.pricePerDay && <span>/ day</span>}
+          </div>
+          <div className="marketplace-rating-info">
+            ⭐ {item.rating || "4.8"} <span className="reviews">{numReviews}</span>
+          </div>
+        </div>
+
+        <div className="marketplace-card-actions">
+          <button
+            type="button"
+            className="btn primary"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/booking/${item.id}`);
+            }}
+          >
+            Rent Now
+          </button>
+          <button
+            type="button"
+            className="btn outline"
+            onClick={(e) => {
+              e.stopPropagation();
+              goToDetails();
+            }}
+          >
+            View Details
+          </button>
+        </div>
       </div>
-    </div>
+    </article>
   );
 }
 

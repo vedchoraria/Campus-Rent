@@ -1,177 +1,217 @@
-import React from "react";
+import React, { useState, useMemo, useEffect } from "react";
 
 const categories = [
-  { name: "Tech", count: 24, active: true },
+  { name: "All", count: 45 },
+  { name: "Tech", count: 24 },
   { name: "Books", count: 18 },
   { name: "Adventure", count: 12 },
   { name: "Sports", count: 9 },
 ];
 
 const locations = [
+  "All Locations",
   "North Campus",
   "South Dorms",
   "Central Library",
   "Arts District",
 ];
 
-const listings = [
-  {
-    id: "m1",
-    title: "MacBook Pro M2 - 2023",
-    price: "$15",
-    rating: "4.9",
-    location: "Campus Center",
-    badge: "Student Verified",
-  },
-  {
-    id: "m2",
-    title: "Sony Alpha A7 III + 35mm",
-    price: "$25",
-    rating: "4.8",
-    location: "Arts District",
-    badge: "Student Verified",
-  },
-  {
-    id: "m3",
-    title: "Sony WH-1000XM5",
-    price: "$8",
-    rating: "5.0",
-    location: "Library North",
-    badge: "Student Verified",
-  },
-  {
-    id: "m4",
-    title: "North Face Stormbreak 2",
-    price: "$12",
-    rating: "4.7",
-    location: "North Campus Quad",
-    badge: "Featured",
-  },
-  {
-    id: "m5",
-    title: "Canon AE-1 Program",
-    price: "$10",
-    rating: "4.6",
-    location: "South Dorms",
-    badge: "Student Verified",
-  },
-];
+import mockData from "../data/mockData.js";
+import ItemCard from "../components/ItemCard.jsx";
 
 function Marketplace() {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [activeCategory, setActiveCategory] = useState("All");
+  const [activeLocation, setActiveLocation] = useState("All Locations");
+  const [sortOption, setSortOption] = useState("Newest");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Debounce search input
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
+  // Simulate initial realistic loading state
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 800);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const filteredAndSortedListings = useMemo(() => {
+    let result = [...mockData];
+
+    // Search filter
+    if (debouncedSearch) {
+      const lowerSearch = debouncedSearch.toLowerCase();
+      result = result.filter(
+        (item) =>
+          item.title.toLowerCase().includes(lowerSearch) ||
+          item.category.toLowerCase().includes(lowerSearch)
+      );
+    }
+
+    // Category filter
+    if (activeCategory !== "All") {
+      result = result.filter((item) => item.category === activeCategory);
+    }
+
+    // Location filter
+    if (activeLocation !== "All Locations") {
+      result = result.filter((item) => item.location === activeLocation);
+    }
+
+    // Sort
+    result.sort((a, b) => {
+      if (sortOption === "Newest") {
+        return new Date(b.dateAdded) - new Date(a.dateAdded);
+      } else if (sortOption === "Price: Low to High") {
+        return a.pricePerDay - b.pricePerDay;
+      } else if (sortOption === "Rating") {
+        return b.rating - a.rating;
+      }
+      return 0;
+    });
+
+    return result;
+  }, [debouncedSearch, activeCategory, activeLocation, sortOption]);
+
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
+
   return (
-    <section className="marketplace">
-      <aside className="marketplace-sidebar">
-        <div className="marketplace-panel">
-          <div className="marketplace-panel-head">
-            <span className="marketplace-panel-icon">C</span>
-            <h4>Categories</h4>
-          </div>
-          <div className="marketplace-category-list">
-            {categories.map((cat) => (
-              <button
-                key={cat.name}
-                type="button"
-                className={`marketplace-category ${cat.active ? "active" : ""}`}
-              >
-                <span>{cat.name}</span>
-                <span className="marketplace-count">{cat.count}</span>
-              </button>
-            ))}
-          </div>
+    <section className="marketplace-container page">
+      <div className="marketplace-top-bar">
+        <div className="marketplace-search">
+          <span role="img" aria-label="search">
+            🔍
+          </span>
+          <input
+            type="text"
+            placeholder="Search for cameras, laptops, books..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
+        <button
+          className="marketplace-filters-toggle btn secondary"
+          onClick={toggleSidebar}
+        >
+          Filters <span>{isSidebarOpen ? "▲" : "▼"}</span>
+        </button>
+      </div>
 
-        <div className="marketplace-panel">
-          <h4>Pickup Location</h4>
-          <div className="marketplace-location-list">
-            {locations.map((loc, index) => (
-              <label key={loc} className="marketplace-checkbox">
-                <input type="checkbox" defaultChecked={index === 0} />
-                <span>{loc}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        <div className="marketplace-panel">
-          <h4>Price Range</h4>
-          <div className="marketplace-range">
-            <div className="marketplace-range-bar">
-              <span className="marketplace-range-fill" />
+      <div className="marketplace">
+        <aside className={`marketplace-sidebar ${isSidebarOpen ? "open" : ""}`}>
+          <div className="marketplace-panel">
+            <div className="marketplace-panel-head">
+              <span className="marketplace-panel-icon">C</span>
+              <h4>Categories</h4>
             </div>
-            <div className="marketplace-range-labels">
-              <span>$0</span>
-              <span>$100+</span>
+            <div className="marketplace-category-list">
+              {categories.map((cat) => (
+                <button
+                  key={cat.name}
+                  type="button"
+                  onClick={() => setActiveCategory(cat.name)}
+                  className={`marketplace-category ${
+                    activeCategory === cat.name ? "active" : ""
+                  }`}
+                >
+                  <span>{cat.name}</span>
+                  <span className="marketplace-count">{cat.count}</span>
+                </button>
+              ))}
             </div>
           </div>
-        </div>
 
-        <div className="marketplace-perk">
-          <h4>Campus Perk</h4>
-          <p>Verified students get insurance on all rentals automatically.</p>
-          <button className="btn primary" type="button">
-            Learn More
-          </button>
-        </div>
-      </aside>
-
-      <div className="marketplace-main">
-        <div className="marketplace-banner">
-          <div>
-            <p>List your own items to earn campus credits!</p>
-            <span>Credits can be used for rentals or dining hall passes.</span>
+          <div className="marketplace-panel">
+            <h4>Pickup Location</h4>
+            <div className="marketplace-location-list">
+              {locations.map((loc) => (
+                <label key={loc} className="marketplace-checkbox hover-target">
+                  <input
+                    type="radio"
+                    name="location"
+                    checked={activeLocation === loc}
+                    onChange={() => setActiveLocation(loc)}
+                  />
+                  <span>{loc}</span>
+                </label>
+              ))}
+            </div>
           </div>
-          <button className="btn secondary" type="button">
-            Start Listing
-          </button>
-        </div>
 
-        <div className="marketplace-head">
-          <div>
-            <h2>Student Marketplace</h2>
-            <p>
-              Find high-quality gear you need for your next project or weekend
-              trip, shared by peers.
-            </p>
-          </div>
-          <button className="marketplace-sort" type="button">
-            Sort: Newest
-          </button>
-        </div>
-
-        <div className="marketplace-grid">
-          {listings.map((item, index) => (
-            <article
-              key={item.id}
-              className={`marketplace-card ${index === 3 ? "wide" : ""}`}
+          <div className="marketplace-panel">
+            <h4>Sort By</h4>
+            <select
+              className="marketplace-sort-select"
+              value={sortOption}
+              onChange={(e) => setSortOption(e.target.value)}
             >
-              <div className="marketplace-card-media">
-                <span className="marketplace-card-badge">{item.badge}</span>
-              </div>
-              <div className="marketplace-card-body">
-                <div>
-                  <h3>{item.title}</h3>
-                  <div className="marketplace-meta">
-                    <span>{item.location}</span>
-                    <span className="marketplace-rating">? {item.rating}</span>
-                  </div>
-                </div>
-                <div className="marketplace-card-footer">
-                  <strong>
-                    {item.price} <span>/ day</span>
-                  </strong>
-                  <button type="button" className="marketplace-cta">
-                    +
-                  </button>
-                </div>
-              </div>
-            </article>
-          ))}
-        </div>
+              <option value="Newest">Newest</option>
+              <option value="Price: Low to High">Price: Low to High</option>
+              <option value="Rating">Rating</option>
+            </select>
+          </div>
 
-        <div className="marketplace-load">
-          <button type="button" className="btn secondary">
-            Load More Items
-          </button>
+          <div className="marketplace-perk">
+            <h4>Campus Perk</h4>
+            <p>Verified students get insurance on all rentals automatically.</p>
+            <button className="btn outline" style={{width: '100%'}} type="button">
+              Learn More
+            </button>
+          </div>
+        </aside>
+
+        <div className="marketplace-main">
+          <div className="marketplace-head">
+            <div>
+              <h2>Explore Listings</h2>
+              <p>
+                Find high-quality gear you need for your next project or weekend
+                trip, shared by peers.
+              </p>
+            </div>
+          </div>
+
+          <div className="marketplace-grid">
+            {isLoading
+              ? Array.from({ length: 6 }).map((_, index) => (
+                  <div key={index} className="marketplace-card skeleton">
+                    <div style={{ height: "170px" }}></div>
+                    <div className="marketplace-card-body">
+                      <div className="skeleton" style={{ height: "20px", width: "80%", marginBottom: "8px" }}></div>
+                      <div className="skeleton" style={{ height: "16px", width: "50%" }}></div>
+                      <div style={{ marginTop: "auto", paddingTop: "12px", display: "flex", justifyContent: "space-between" }}>
+                        <div className="skeleton" style={{ height: "24px", width: "30%" }}></div>
+                        <div className="skeleton" style={{ height: "24px", width: "20%" }}></div>
+                      </div>
+                      <div className="marketplace-card-actions">
+                        <div className="skeleton" style={{ height: "40px", borderRadius: "8px" }}></div>
+                        <div className="skeleton" style={{ height: "40px", borderRadius: "8px" }}></div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              : filteredAndSortedListings.length > 0 ? (
+                  filteredAndSortedListings.map((item) => (
+                    <ItemCard key={item.id} item={item} />
+                  ))
+                ) : (
+                  <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "40px 0", color: "var(--muted)" }}>
+                    <h3>No listings found</h3>
+                    <p>Try adjusting your search or filters.</p>
+                  </div>
+                )}
+          </div>
         </div>
       </div>
     </section>
