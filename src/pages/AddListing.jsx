@@ -1,133 +1,197 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import mockData from "../data/mockData.js";
 
 const steps = ["Item Info", "Pricing Info", "Visual Showcase"];
 
 const conditionOptions = [
-  {
-    value: "new",
-    title: "New",
-    desc: "Never used, original packaging",
-  },
-  {
-    value: "like-new",
-    title: "Like New",
-    desc: "Minimal wear, perfectly functional",
-  },
-  {
-    value: "good",
-    title: "Good",
-    desc: "Minor scratches, well maintained",
-  },
-  {
-    value: "fair",
-    title: "Fair",
-    desc: "Clear signs of use, works fine",
-  },
+  { value: "new", title: "New", desc: "Never used, original packaging" },
+  { value: "like-new", title: "Like New", desc: "Minimal wear, functional" },
+  { value: "good", title: "Good", desc: "Minor scratches, well maintained" },
+  { value: "fair", title: "Fair", desc: "Clear signs of use, works fine" },
 ];
 
-const photoTips = [
-  {
-    title: "Use natural light",
-    desc: "Take photos near a window for the best clarity.",
-  },
-  {
-    title: "Show all angles",
-    desc: "Capture the front, back, and any unique features.",
-  },
-  {
-    title: "Highlight wear",
-    desc: "Be transparent about any scratches or minor issues.",
-  },
-  {
-    title: "Clean background",
-    desc: "A neutral background makes your gear pop.",
-  },
-];
+const categoryOptions = ["Tech", "Adventure", "Sports", "Books", "General", "Other"];
+const locationOptions = ["Central Garden", "Pie-Chai", "Bihan", "AMUL", "Other"];
 
-const pricingTips = [
-  {
-    title: "The Weekend Special",
-    desc: "Many students rent for projects. A 3-day rate attracts more serious renters.",
-  },
-  {
-    title: "Lower Price, Faster Match",
-    desc: "Listings priced slightly below average gain reviews faster and earn more.",
-  },
-  {
-    title: "Friend of a Friend",
-    desc: "Offer student group discounts to build trust and repeat rentals.",
-  },
-];
+const fallbackImages = ["purple", "blue", "teal", "coral"];
 
 function AddListing() {
+  const navigate = useNavigate();
   const [step, setStep] = useState(1);
+  const [error, setError] = useState("");
+  
   const [form, setForm] = useState({
     title: "",
-    category: "",
+    category: "Tech",
+    customCategory: "",
     description: "",
-    condition: "new",
-    rate: "",
-    deposit: "",
-    pickup: "",
-    period: "3 Days",
+    condition: "like-new",
+    pricePerDay: "",
+    securityDeposit: "",
+    mrp: "",
+    location: "Central Garden",
+    customLocation: "",
+    minDays: 1,
+    images: []
   });
 
-  const progress = useMemo(() => {
-    if (steps.length <= 1) return "0%";
-    return `${(step / steps.length) * 100}%`;
+  // 8. Debugging Requirement
+  useEffect(() => {
+    console.log("Current Step:", step);
   }, [step]);
 
+  // 3. Progress Bar Logic dynamically calculated
+  const progress = (step / steps.length) * 100;
+
   const updateField = (key, value) => {
+    setError("");
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  const goNext = () => setStep((prev) => Math.min(prev + 1, steps.length));
-  const goBack = () => setStep((prev) => Math.max(prev - 1, 1));
+  const validateStep = (currentStep) => {
+    if (currentStep === 1) {
+      if (!form.title.trim() || !form.description.trim()) {
+        setError("Title and description are required.");
+        return false;
+      }
+      if (form.category === "Other" && !form.customCategory.trim()) {
+        setError("Please enter a custom category.");
+        return false;
+      }
+    }
+    if (currentStep === 2) {
+      const p = Number(form.pricePerDay);
+      const d = Number(form.securityDeposit);
+      const m = Number(form.mrp);
+      const minD = Number(form.minDays);
+
+      if (!p || !d || !m || p <= 0 || d <= 0 || m <= 0) {
+        setError("Pricing fields must be greater than zero.");
+        return false;
+      }
+      if (d >= m) {
+        setError("Security Deposit must be strictly less than the Retail Price (MRP).");
+        return false;
+      }
+      if (!minD || minD < 1) {
+        setError("Minimum rental days must be at least 1.");
+        return false;
+      }
+      if (form.location === "Other" && !form.customLocation.trim()) {
+        setError("Please enter a custom pickup location.");
+        return false;
+      }
+    }
+    if (currentStep === 3) {
+      if (form.images.length === 0) {
+        setError("Please upload at least one image.");
+        return false;
+      }
+    }
+    return true;
+  };
+
+  // 2. Navigation Functions (STRICT)
+  const goNext = () => {
+    if (validateStep(step)) {
+      setStep((prev) => Math.min(prev + 1, steps.length));
+    }
+  };
+
+  const goBack = () => {
+    setError("");
+    setStep((prev) => Math.max(prev - 1, 1));
+  };
+
+  const handleMockUpload = () => {
+    setError("");
+    if (form.images.length >= 5) return;
+    
+    // Simulate an image upload by selecting a random gradient class
+    const color = fallbackImages[Math.floor(Math.random() * fallbackImages.length)];
+    setForm(prev => ({
+      ...prev,
+      images: [...prev.images, color]
+    }));
+  };
+
+  const handleRemoveImage = (index) => {
+    setForm(prev => {
+      const updated = [...prev.images];
+      updated.splice(index, 1);
+      return { ...prev, images: updated };
+    });
+  };
+
+  const handlePublish = () => {
+    if (validateStep(3)) {
+      const finalCategory = form.category === "Other" ? form.customCategory : form.category;
+      const finalLocation = form.location === "Other" ? form.customLocation : form.location;
+
+      const newItem = {
+        id: `m${Date.now()}`,
+        title: form.title,
+        pricePerDay: Number(form.pricePerDay),
+        securityDeposit: Number(form.securityDeposit),
+        mrp: Number(form.mrp),
+        minDays: Number(form.minDays),
+        rating: 0,
+        reviewsCount: 0,
+        location: finalLocation,
+        category: finalCategory,
+        isVerified: true, 
+        availability: "Available Now",
+        images: form.images,
+        dateAdded: new Date().toISOString(),
+        description: form.description,
+        bookings: []
+      };
+
+      mockData.unshift(newItem); 
+      navigate(`/item/${newItem.id}`);
+    }
+  };
 
   return (
     <section className="listing-flow">
-      <div className="listing-banner">
-        <div className="listing-banner-content">
-          <span className="listing-banner-icon">V</span>
-          <div>
-            <strong>Verify your .edu email</strong>
-            <p>Verified students get 2x more rental requests.</p>
-          </div>
-        </div>
-        <button className="btn primary" type="button">
-          Verify Now
-        </button>
-      </div>
-
+      
       <div className="listing-header">
         <div>
           <h2>List Your Gear</h2>
-          <p>Share your items with the campus community.</p>
+          <p>Share your items with the campus community securely.</p>
         </div>
         <span className="listing-step">Step {step} of {steps.length}</span>
       </div>
 
       <div className="listing-progress">
         <div className="listing-progress-bar">
-          <span className="listing-progress-fill" style={{ width: progress }} />
+          <span className="listing-progress-fill" style={{ width: `${progress}%` }} />
         </div>
         <div className="listing-progress-labels">
-          {steps.map((label, index) => (
-            <span
-              key={label}
-              className={
-                index + 1 === step ? "active" : index + 1 < step ? "complete" : ""
-              }
-            >
-              {label}
-            </span>
-          ))}
+          {steps.map((label, index) => {
+            // 5. Step Indicator Highlight logic
+            const isCompletedOrActive = step >= index + 1;
+            return (
+              <span key={label} className={step === index + 1 ? "active" : isCompletedOrActive ? "complete" : ""}>
+                {label}
+              </span>
+            );
+          })}
         </div>
       </div>
 
+      {error && (
+        <div style={{ background: 'rgba(225, 29, 72, 0.1)', color: '#e11d48', padding: '16px', borderRadius: '8px', marginBottom: '24px', fontWeight: 500 }}>
+          ⚠️ {error}
+        </div>
+      )}
+
+      {/* STEP 1: Core Details */}
       {step === 1 && (
         <div className="listing-grid">
           <div className="listing-column">
+            
             <div className="listing-card">
               <div className="listing-card-head">
                 <span className="listing-card-icon">i</span>
@@ -136,27 +200,49 @@ function AddListing() {
                   <p>Tell renters the basics so they can decide quickly.</p>
                 </div>
               </div>
+              
               <div className="listing-field">
                 <label>Item Title</label>
                 <input
                   className="listing-input-field"
                   value={form.title}
-                  onChange={(event) => updateField("title", event.target.value)}
+                  onChange={(e) => updateField("title", e.target.value)}
                   placeholder="e.g., MacBook Pro M2 Space Gray"
                 />
               </div>
+
               <div className="listing-field">
                 <label>Category</label>
-                <button type="button" className="listing-select">
-                  {form.category || "Select a category"}
-                </button>
+                <select 
+                  className="listing-input-field"
+                  style={{ cursor: 'pointer', appearance: 'menulist' }}
+                  value={form.category}
+                  onChange={(e) => updateField("category", e.target.value)}
+                >
+                  {categoryOptions.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
               </div>
+
+              {form.category === "Other" && (
+                <div className="listing-field" style={{ marginTop: '12px' }}>
+                  <label>Custom Category</label>
+                  <input
+                    className="listing-input-field"
+                    value={form.customCategory}
+                    onChange={(e) => updateField("customCategory", e.target.value)}
+                    placeholder="Enter custom category"
+                  />
+                </div>
+              )}
+
               <div className="listing-field">
                 <label>Detailed Description</label>
                 <textarea
                   className="listing-textarea"
                   value={form.description}
-                  onChange={(event) => updateField("description", event.target.value)}
+                  onChange={(e) => updateField("description", e.target.value)}
                   placeholder="Tell potential borrowers about the specs, age, and why it is great."
                   rows={4}
                 />
@@ -176,9 +262,7 @@ function AddListing() {
                   <button
                     key={option.value}
                     type="button"
-                    className={`listing-condition ${
-                      form.condition === option.value ? "active" : ""
-                    }`}
+                    className={`listing-condition ${form.condition === option.value ? "active" : ""}`}
                     onClick={() => updateField("condition", option.value)}
                   >
                     <strong>{option.title}</strong>
@@ -188,261 +272,205 @@ function AddListing() {
               </div>
             </div>
 
-            <div className="listing-actions">
-              <button type="button" className="btn secondary">
-                Save Draft
-              </button>
-              <div className="listing-actions-right">
-                <button type="button" className="btn primary" onClick={goNext}>
-                  Continue to Pricing
-                </button>
-              </div>
+            <div className="listing-actions" style={{ justifyContent: 'flex-end' }}>
+              <button type="button" className="btn primary" onClick={goNext}>Continue to Pricing</button>
             </div>
           </div>
-
+          
+          {/* Right Side Panel for Step 1 */}
           <aside className="listing-side">
-            <div className="listing-side-card highlight">
-              <span className="listing-side-icon">S</span>
-              <div>
-                <strong>Student Verified</strong>
-                <p>
-                  Listing as a verified student increases trust by 40% in our
-                  community.
-                </p>
-              </div>
-            </div>
-
             <div className="listing-side-card">
               <h4>Tips for a Great Listing</h4>
-              <div className="listing-tip-list">
-                <div className="listing-tip">
-                  <span>1</span>
+              <div className="listing-tip-list" style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div className="listing-tip" style={{ display: 'flex', gap: '12px' }}>
+                  <span style={{ background: 'var(--primary)', color: 'white', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', flexShrink: 0 }}>1</span>
                   <div>
-                    <strong>Be descriptive</strong>
-                    <p>Specify model numbers, colors, and included accessories.</p>
+                    <strong style={{ display: 'block', fontSize: '14px', marginBottom: '4px' }}>Use descriptive titles</strong>
+                    <p style={{ color: 'var(--muted)', fontSize: '13px', margin: 0 }}>Include brand names, models, and standout features.</p>
                   </div>
                 </div>
-                <div className="listing-tip">
-                  <span>2</span>
+                <div className="listing-tip" style={{ display: 'flex', gap: '12px' }}>
+                  <span style={{ background: 'var(--primary)', color: 'white', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', flexShrink: 0 }}>2</span>
                   <div>
-                    <strong>Mention any flaws</strong>
-                    <p>Honesty builds long-term ratings. Note scratches or quirks.</p>
-                  </div>
-                </div>
-                <div className="listing-tip">
-                  <span>3</span>
-                  <div>
-                    <strong>Next step: Photos</strong>
-                    <p>High-res shots from 4 angles work best.</p>
+                    <strong style={{ display: 'block', fontSize: '14px', marginBottom: '4px' }}>Add detailed descriptions</strong>
+                    <p style={{ color: 'var(--muted)', fontSize: '13px', margin: 0 }}>Explaining use-cases (e.g., "Great for CS101 projects") increases bookings by 30%.</p>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="listing-side-card preview">
-              <div className="listing-preview-tag">Live Preview</div>
-              <div className="listing-preview-image" />
-              <div className="listing-preview-lines">
-                <span />
-                <span />
+            <div className="listing-side-card" style={{ background: 'var(--bg)', border: '1px solid var(--border)' }}>
+              <h4 style={{ marginBottom: '16px' }}>Live Preview</h4>
+              <div style={{ background: 'var(--surface)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' }}>
+                 <div style={{ width: '100%', aspectRatio: '16/9', background: 'var(--border)', borderRadius: '8px', marginBottom: '16px' }}></div>
+                 <h3 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '4px' }}>{form.title || "Your Item Title"}</h3>
+                 <span style={{ fontSize: '12px', color: 'var(--muted)', background: 'var(--bg)', padding: '4px 8px', borderRadius: '999px', display: 'inline-block' }}>
+                   {form.category === "Other" && form.customCategory ? form.customCategory : (form.category || "Category")}
+                 </span>
               </div>
             </div>
           </aside>
         </div>
       )}
 
+      {/* STEP 2: Pricing */}
       {step === 2 && (
-        <>
-          <div className="listing-card">
-            <div className="listing-card-head">
-              <span className="listing-card-icon">P</span>
-              <div>
-                <h3>Pricing & Location</h3>
-                <p>Set your rate, deposit, and meetup spot.</p>
-              </div>
-            </div>
-
-            <div className="listing-form-grid">
-              <div>
-                <label>Daily Rental Rate</label>
-                <div className="listing-input">
-                  <span>$</span>
-                  <input
-                    type="text"
-                    placeholder="0.00"
-                    value={form.rate}
-                    onChange={(event) => updateField("rate", event.target.value)}
-                  />
-                </div>
-                <small>Student tip: $10-$15/day works best for tech gear.</small>
-              </div>
-              <div>
-                <label>Security Deposit</label>
-                <div className="listing-input">
-                  <span>$</span>
-                  <input
-                    type="text"
-                    placeholder="0.00"
-                    value={form.deposit}
-                    onChange={(event) => updateField("deposit", event.target.value)}
-                  />
-                </div>
-                <small>Fully refundable if item returns in original condition.</small>
-              </div>
-            </div>
-
-            <div className="listing-field">
-              <label>Preferred Pickup Spot</label>
-              <button type="button" className="listing-select">
-                {form.pickup || "Select a campus landmark..."}
-              </button>
-              <small>Choose a well-lit, busy area for a safe exchange.</small>
-            </div>
-
-            <div className="listing-field">
-              <label>Minimum Rental Period</label>
-              <div className="listing-pill-group">
-                {["1 Day", "3 Days", "1 Week", "Flexible"].map((label) => (
-                  <button
-                    key={label}
-                    type="button"
-                    className={`listing-pill ${
-                      form.period === label ? "active" : ""
-                    }`}
-                    onClick={() => updateField("period", label)}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="listing-notice">
-              <span className="listing-notice-icon">!</span>
-              <div>
-                <strong>Protected by Campus Guarantee</strong>
-                <p>
-                  Every rental includes $500 damage protection and automated late
-                  return fees for your peace of mind.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="listing-actions">
-            <button type="button" className="btn ghost" onClick={goBack}>
-              Back to Item Info
-            </button>
-            <div className="listing-actions-right">
-              <button type="button" className="btn secondary">
-                Save Draft
-              </button>
-              <button type="button" className="btn primary" onClick={goNext}>
-                Continue to Photos
-              </button>
-            </div>
-          </div>
-
-          <div className="listing-bottom">
-            <div className="listing-tip-card">
-              <h4>Pricing for your peers</h4>
-              <ul>
-                {pricingTips.map((tip) => (
-                  <li key={tip.title}>
-                    <strong>{tip.title}</strong>
-                    <span>{tip.desc}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="listing-illustration">
-              <div className="listing-illustration-body">
-                <div className="listing-illustration-circle" />
-                <p>Join 2,400+ students already earning on campus.</p>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-
-      {step === 3 && (
-        <div className="listing-grid">
+        <div className="listing-grid" style={{ gridTemplateColumns: 'minmax(0, 800px)', justifyContent: 'center' }}>
           <div className="listing-column">
             <div className="listing-card">
               <div className="listing-card-head">
-                <span className="listing-card-icon">V</span>
+                <span className="listing-card-icon">P</span>
                 <div>
-                  <h3>Visual Showcase</h3>
-                  <p>High-quality photos build trust and improve conversions.</p>
+                  <h3>Pricing & Protection</h3>
+                  <p>Set securely verified parameters to protect your gear.</p>
                 </div>
               </div>
-              <div className="listing-upload">
-                <div className="listing-upload-icon">+</div>
+
+              <div className="listing-form-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)', gap: '24px' }}>
                 <div>
-                  <strong>Drag and drop photos here</strong>
-                  <p>Support JPG or PNG up to 10MB</p>
+                  <label>Daily Rate (₹)</label>
+                  <input
+                    type="number"
+                    className="listing-input-field"
+                    placeholder="e.g. 500"
+                    value={form.pricePerDay}
+                    onChange={(e) => updateField("pricePerDay", e.target.value)}
+                  />
                 </div>
-                <button type="button" className="btn primary">
-                  Select Files
-                </button>
-              </div>
-              <div className="listing-upload-grid">
-                {Array.from({ length: 4 }).map((_, index) => (
-                  <div key={index} className="listing-upload-tile">
-                    <span>IMG</span>
-                  </div>
-                ))}
-              </div>
-              <div className="listing-verify">
-                <div className="listing-verify-icon">S</div>
                 <div>
-                  <strong>Student Verification</strong>
-                  <p>
-                    We verify that gear photos match your description so rentals
-                    stay safe.
-                  </p>
+                  <label>Retail Price (MRP)</label>
+                  <input
+                    type="number"
+                    className="listing-input-field"
+                    placeholder="e.g. 15000"
+                    value={form.mrp}
+                    onChange={(e) => updateField("mrp", e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Security Deposit (₹)</span>
+                  </label>
+                  <input
+                    type="number"
+                    className="listing-input-field"
+                    style={{ borderColor: Number(form.securityDeposit) >= Number(form.mrp) && form.mrp ? '#e11d48' : '' }}
+                    placeholder="0"
+                    value={form.securityDeposit}
+                    onChange={(e) => updateField("securityDeposit", e.target.value)}
+                  />
+                  <small style={{ color: 'var(--muted)', display: 'block', marginTop: '6px' }}>Recommended: ~50% of the actual MRP</small>
+                </div>
+                <div>
+                  <label>Minimum Rental Days</label>
+                  <input
+                    type="number"
+                    min="1"
+                    className="listing-input-field"
+                    placeholder="1"
+                    value={form.minDays}
+                    onChange={(e) => updateField("minDays", e.target.value)}
+                  />
                 </div>
               </div>
+            </div>
+
+            <div className="listing-card">
+              <div className="listing-field">
+                <label>Preferred Pickup Spot</label>
+                <select 
+                  className="listing-input-field"
+                  style={{ cursor: 'pointer', appearance: 'menulist' }}
+                  value={form.location}
+                  onChange={(e) => updateField("location", e.target.value)}
+                >
+                  {locationOptions.map(loc => (
+                    <option key={loc} value={loc}>{loc}</option>
+                  ))}
+                </select>
+                <small style={{ color: 'var(--muted)', marginTop: '6px', display: 'block' }}>Choose a well-lit, busy area for a safe exchange.</small>
+              </div>
+
+              {form.location === "Other" && (
+                <div className="listing-field" style={{ marginTop: '16px' }}>
+                  <label>Custom Pickup Location</label>
+                  <input
+                    className="listing-input-field"
+                    value={form.customLocation}
+                    onChange={(e) => updateField("customLocation", e.target.value)}
+                    placeholder="Enter a safe campus landmark"
+                  />
+                </div>
+              )}
             </div>
 
             <div className="listing-actions">
-              <button type="button" className="btn ghost" onClick={goBack}>
-                Back to Pricing
-              </button>
-              <div className="listing-actions-right">
-                <button type="button" className="btn primary">
-                  Publish Listing
-                </button>
-              </div>
+              <button type="button" className="btn ghost" onClick={goBack}>Back to Item Info</button>
+              <button type="button" className="btn primary" onClick={goNext}>Continue to Photos</button>
             </div>
+            
           </div>
-
-          <aside className="listing-side">
-            <div className="listing-side-card">
-              <h4>Photo Tips</h4>
-              <div className="listing-tip-list">
-                {photoTips.map((tip, index) => (
-                  <div key={tip.title} className="listing-tip">
-                    <span>{index + 1}</span>
-                    <div>
-                      <strong>{tip.title}</strong>
-                      <p>{tip.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="listing-side-card highlight">
-              <span className="listing-side-icon">V</span>
-              <div>
-                <strong>Verified Student Listing</strong>
-                <p>Badges increase visibility for campus renters.</p>
-              </div>
-            </div>
-          </aside>
         </div>
       )}
+
+      {/* STEP 3: Images */}
+      {step === 3 && (
+        <div style={{ maxWidth: '700px', margin: '0 auto' }}>
+          <div className="listing-card">
+            <div className="listing-card-head">
+              <span className="listing-card-icon">V</span>
+              <div>
+                <h3>Visual Showcase</h3>
+                <p>High-quality photos build trust and improve conversions.</p>
+              </div>
+            </div>
+            
+            <div className="listing-upload">
+              <div className="listing-upload-icon">+</div>
+              <div>
+                <strong>Upload images (max 5)</strong>
+                <p style={{ color: 'var(--muted)' }}>Click below to simulate image processing...</p>
+              </div>
+              <button 
+                type="button" 
+                className="btn primary" 
+                onClick={handleMockUpload}
+                disabled={form.images.length >= 5}
+              >
+                {form.images.length >= 5 ? "Limit Reached" : "Simulate Image Upload"}
+              </button>
+            </div>
+
+            <div className="listing-upload-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '16px', marginTop: '24px' }}>
+              {form.images.map((imgClass, index) => (
+                <div key={index} style={{ position: 'relative' }}>
+                  <div className={`marketplace-card-media ${imgClass}`} style={{ width: '100%', aspectRatio: '1/1', borderRadius: '12px', border: '2px solid var(--border)' }}></div>
+                  <button 
+                    onClick={() => handleRemoveImage(index)}
+                    style={{ position: 'absolute', top: '-8px', right: '-8px', background: '#e11d48', color: '#fff', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
+                    ×
+                  </button>
+                </div>
+              ))}
+              {form.images.length === 0 && (
+                <div style={{ gridColumn: '1 / -1', padding: '16px', textAlign: 'center', color: 'var(--muted)', fontStyle: 'italic', background: 'var(--bg)', borderRadius: '8px' }}>
+                  No photos uploaded yet. Click above to add some!
+                </div>
+              )}
+            </div>
+
+          </div>
+
+          <div className="listing-actions" style={{ marginTop: '24px' }}>
+            <button type="button" className="btn ghost" onClick={goBack}>Back to Pricing</button>
+            <button type="button" className="btn primary" onClick={handlePublish} disabled={form.images.length === 0}>
+              Publish to Marketplace
+            </button>
+          </div>
+          
+        </div>
+      )}
+
     </section>
   );
 }
