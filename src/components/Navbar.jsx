@@ -50,7 +50,7 @@ function Navbar() {
             </button>
             <div className="profile-dropdown-menu">
               <Link to="#" className="dropdown-item">⚙️ Settings & Profile</Link>
-              <Link to="/booking" className="dropdown-item">📦 My Rentals</Link>
+              <Link to="/my-bookings" className="dropdown-item">📦 My Rentals</Link>
               <hr className="dropdown-divider" />
               <button onClick={handleLogout} className="dropdown-item text-danger">Logout</button>
             </div>

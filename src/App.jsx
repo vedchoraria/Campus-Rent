@@ -8,6 +8,7 @@ import Marketplace from "./pages/Marketplace.jsx";
 import ItemDetails from "./pages/ItemDetails.jsx";
 import AddListing from "./pages/AddListing.jsx";
 import Booking from "./pages/Booking.jsx";
+import MyBookings from "./pages/MyBookings.jsx";
 import Chat from "./pages/Chat.jsx";
 import Login from "./pages/Login.jsx";
 import Signup from "./pages/Signup.jsx";
@@ -36,6 +37,7 @@ function App() {
             <Route path="/item/:id" element={<ProtectedRoute><ItemDetails /></ProtectedRoute>} />
             <Route path="/add" element={<ProtectedRoute><AddListing /></ProtectedRoute>} />
             <Route path="/booking/:id" element={<ProtectedRoute><Booking /></ProtectedRoute>} />
+            <Route path="/my-bookings" element={<ProtectedRoute><MyBookings /></ProtectedRoute>} />
             <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
           </Routes>
         </div>

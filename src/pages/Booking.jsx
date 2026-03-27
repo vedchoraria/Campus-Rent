@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
-import mockData from "../data/mockData.js";
+import mockData, { userBookings } from "../data/mockData.js";
 import BookingForm from "../components/BookingForm.jsx";
 import PriceBreakdown from "../components/PriceBreakdown.jsx";
 import { checkAvailability } from "../utils/bookingUtils.js";
@@ -86,7 +86,7 @@ function Booking() {
   const totalDays = calculateTotalDays();
   const totalItemPrice = totalDays * item.pricePerDay;
   const serviceFee = totalDays > 0 ? 50 : 0; // Fixed Campus Fee ₹50
-  const finalTotal = totalItemPrice + serviceFee;
+  const finalTotal = totalItemPrice + serviceFee + (item.securityDeposit || 0);
   const isValid = totalDays > 0 && !error;
 
   const handleConfirm = () => {
@@ -97,7 +97,22 @@ function Booking() {
       }
       item.bookings.push({ start: startDate, end: endDate });
 
-      navigate("/chat", { state: { bookingRef: `REQ-${Date.now()}` } });
+      // Save centralized representation to global userBookings for /my-bookings view
+      const bookingId = `REQ-${Date.now()}`;
+      userBookings.push({
+        id: bookingId,
+        itemId: item.id,
+        title: item.title,
+        image: item.images?.[0] || item.imageClass,
+        start: startDate,
+        end: endDate,
+        rentalAmount: totalItemPrice,
+        depositAmount: item.securityDeposit || 0,
+        totalAmount: finalTotal,
+        status: "confirmed"
+      });
+
+      navigate("/chat", { state: { bookingRef: bookingId } });
     }
   };
 
@@ -148,6 +163,7 @@ function Booking() {
           <PriceBreakdown 
             totalDays={totalDays}
             pricePerDay={item.pricePerDay}
+            securityDeposit={item.securityDeposit}
             serviceFee={serviceFee}
             finalTotal={finalTotal}
             isValid={isValid}

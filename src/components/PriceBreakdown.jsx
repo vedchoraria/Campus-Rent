@@ -1,6 +1,6 @@
 import React from "react";
 
-function PriceBreakdown({ totalDays, pricePerDay, serviceFee, finalTotal, isValid, onConfirm, onCancel, primaryText = "Confirm Booking" }) {
+function PriceBreakdown({ totalDays, pricePerDay, securityDeposit = 0, serviceFee, finalTotal, isValid, onConfirm, onCancel, primaryText = "Confirm Booking" }) {
   return (
     <div className="price-breakdown" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '32px', boxShadow: 'var(--shadow)' }}>
       <h3 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '24px' }}>Order Summary</h3>
@@ -10,6 +10,10 @@ function PriceBreakdown({ totalDays, pricePerDay, serviceFee, finalTotal, isVali
           <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text)' }}>
             <span>₹{pricePerDay} × {totalDays} {totalDays === 1 ? 'day' : 'days'}</span>
             <span>₹{(totalDays * pricePerDay)}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text)' }}>
+            <span>Security Deposit (Refundable)</span>
+            <span>₹{securityDeposit}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text)' }}>
             <span>Campus Fee</span>
@@ -48,6 +52,10 @@ function PriceBreakdown({ totalDays, pricePerDay, serviceFee, finalTotal, isVali
           </button>
         )}
       </div>
+      
+      <p style={{ display: 'block', textAlign: 'center', color: 'var(--muted)', fontSize: '12px', marginTop: '16px' }}>
+        🔒 Security deposit will be refunded after safe return.
+      </p>
     </div>
   );
 }

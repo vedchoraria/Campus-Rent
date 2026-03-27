@@ -73,7 +73,7 @@ function ItemDetails() {
   const totalDays = calculateTotalDays();
   const totalItemPrice = totalDays * item.pricePerDay;
   const serviceFee = totalDays > 0 ? 50 : 0;
-  const finalTotal = totalItemPrice + serviceFee;
+  const finalTotal = totalItemPrice + serviceFee + (item.securityDeposit || 0);
   const isValid = totalDays > 0 && !error;
 
   const proceedToBooking = () => {
@@ -117,6 +117,7 @@ function ItemDetails() {
           <PriceBreakdown 
             totalDays={totalDays}
             pricePerDay={item.pricePerDay}
+            securityDeposit={item.securityDeposit}
             serviceFee={serviceFee}
             finalTotal={finalTotal}
             isValid={isValid}
