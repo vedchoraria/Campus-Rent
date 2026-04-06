@@ -1,5 +1,34 @@
 export const userBookings = [];
 
+export const mockUsers = [
+  {
+    id: "u_12345",
+    full_name: "Alex Rivera",
+    email: "alex.rivera@northcampus.edu",
+    bio: "Currently a Senior at North Campus specializing in Sustainable Design. I started using CampusRent to help peers get access to professional tools. I take great care of my gear and expect the same!",
+    rating: 4.9,
+    reviews_count: 32,
+    campus: "North Campus",
+    major: "Design Engineering",
+    items_lent: 42,
+    items_borrowed: 12,
+    preferred_pickup_zones: ["Library Cafe", "North Campus Dorms", "The Quad"]
+  },
+  {
+    id: "u_67890",
+    full_name: "Samira Patel",
+    email: "samira.p@artsdistrict.edu",
+    bio: "Photography major! Always looking to rent out my lenses when I'm not using them. Reach out if you need advice on gear.",
+    rating: 5.0,
+    reviews_count: 14,
+    campus: "Arts District",
+    major: "Photography & Media",
+    items_lent: 15,
+    items_borrowed: 3,
+    preferred_pickup_zones: ["Arts Studio 4", "Central Garden"]
+  }
+];
+
 const mockData = [
   {
     id: "m1",

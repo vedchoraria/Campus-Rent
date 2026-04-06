@@ -43,6 +43,7 @@ function App() {
             <Route path="/booking/:id" element={<ProtectedRoute><Booking /></ProtectedRoute>} />
             <Route path="/my-bookings" element={<ProtectedRoute><MyBookings /></ProtectedRoute>} />
             <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
+            <Route path="/user/:id" element={<Profile />} />
             
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>}>
               <Route path="profile" element={<Profile />} />
