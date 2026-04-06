@@ -2,8 +2,11 @@ import React, { useEffect, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 
+let timeout;
+
 function Navbar() {
   const [scrolled, setScrolled] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -41,19 +44,33 @@ function Navbar() {
       {user ? (
         <div className="nav-user">
           <button className="nav-icon-btn" title="Notifications">
-             🔔
+            🔔
           </button>
-          <div className="profile-dropdown-wrapper">
-            <button className="nav-profile-btn">
-              <div className="nav-avatar mini">{user.initials}</div>
-              <span className="nav-username">{user.name}</span>
-            </button>
-            <div className="profile-dropdown-menu">
-              <Link to="#" className="dropdown-item">⚙️ Settings & Profile</Link>
-              <Link to="/my-bookings" className="dropdown-item">📦 My Rentals</Link>
-              <hr className="dropdown-divider" />
-              <button onClick={handleLogout} className="dropdown-item text-danger">Logout</button>
+          <div 
+            className="profile-wrapper"
+            onMouseEnter={() => {
+              clearTimeout(timeout);
+              setIsOpen(true);
+            }}
+            onMouseLeave={() => {
+              timeout = setTimeout(() => setIsOpen(false), 200);
+            }}
+          >
+            <div className="profile-trigger">
+              <button className="nav-profile-btn">
+                <div className="nav-avatar mini">{user.initials}</div>
+                <span className="nav-username">{user.name}</span>
+              </button>
             </div>
+            {isOpen && (
+              <div className="dropdown-menu">
+                <Link to="/dashboard/profile" className="dropdown-item" onClick={() => setIsOpen(false)}>⚙️ Profile</Link>
+                <Link to="/dashboard/rentals" className="dropdown-item" onClick={() => setIsOpen(false)}>📦 My Rentals</Link>
+                <Link to="/dashboard/listings" className="dropdown-item" onClick={() => setIsOpen(false)}>📋 My Listings</Link>
+                <hr className="dropdown-divider" />
+                <button onClick={handleLogout} className="dropdown-item text-danger">Logout</button>
+              </div>
+            )}
           </div>
         </div>
       ) : (

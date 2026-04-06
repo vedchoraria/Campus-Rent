@@ -12,6 +12,10 @@ import MyBookings from "./pages/MyBookings.jsx";
 import Chat from "./pages/Chat.jsx";
 import Login from "./pages/Login.jsx";
 import Signup from "./pages/Signup.jsx";
+import Dashboard from "./pages/Dashboard.jsx";
+import Profile from "./pages/Profile.jsx";
+import Requests from "./pages/Requests.jsx";
+import MyListings from "./pages/MyListings.jsx";
 
 function ProtectedRoute({ children }) {
   const { user } = useAuth();
@@ -39,6 +43,13 @@ function App() {
             <Route path="/booking/:id" element={<ProtectedRoute><Booking /></ProtectedRoute>} />
             <Route path="/my-bookings" element={<ProtectedRoute><MyBookings /></ProtectedRoute>} />
             <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
+            
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>}>
+              <Route path="profile" element={<Profile />} />
+              <Route path="rentals" element={<MyBookings />} />
+              <Route path="listings" element={<MyListings />} />
+              <Route path="requests" element={<Requests />} />
+            </Route>
           </Routes>
         </div>
       </main>

@@ -4,7 +4,7 @@ const mockData = [
   {
     id: "m1",
     title: "MacBook Pro M2 - 2023",
-    pricePerDay: 1500,    
+    pricePerDay: 1500,
     securityDeposit: 25000,
     mrp: 120000,
     rating: 4.9,
