@@ -44,7 +44,7 @@ function App() {
             <Route path="/my-bookings" element={<ProtectedRoute><MyBookings /></ProtectedRoute>} />
             <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
             <Route path="/user/:id" element={<Profile />} />
-            
+
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>}>
               <Route path="profile" element={<Profile />} />
               <Route path="rentals" element={<MyBookings />} />

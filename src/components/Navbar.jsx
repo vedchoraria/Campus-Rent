@@ -46,7 +46,7 @@ function Navbar() {
           <button className="nav-icon-btn" title="Notifications">
             🔔
           </button>
-          <div 
+          <div
             className="profile-wrapper"
             onMouseEnter={() => {
               clearTimeout(timeout);
