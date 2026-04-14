@@ -12,7 +12,7 @@ import MyBookings from "./pages/MyBookings.jsx";
 import Chat from "./pages/Chat.jsx";
 import Login from "./pages/Login.jsx";
 import Signup from "./pages/Signup.jsx";
-import Dashboard from "./pages/Dashboard.jsx";
+import DashboardLayout from "./components/DashboardLayout.jsx";
 import Profile from "./pages/Profile.jsx";
 import Requests from "./pages/Requests.jsx";
 import MyListings from "./pages/MyListings.jsx";
@@ -45,7 +45,7 @@ function App() {
             <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
             <Route path="/user/:id" element={<Profile />} />
 
-            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>}>
+            <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
               <Route path="profile" element={<Profile />} />
               <Route path="rentals" element={<MyBookings />} />
               <Route path="listings" element={<MyListings />} />
