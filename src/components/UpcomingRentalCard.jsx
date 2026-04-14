@@ -1,6 +1,6 @@
 import React from "react";
 
-function UpcomingRentalCard({ rental }) {
+function UpcomingRentalCard({ rental, onCancel, onChat }) {
   return (
     <div
       style={{
@@ -34,10 +34,15 @@ function UpcomingRentalCard({ rental }) {
           <button
             className="btn outline"
             style={{ padding: "8px 14px", fontSize: "14px", borderColor: "#e11d48", color: "#e11d48" }}
+            onClick={() => onCancel?.(rental)}
           >
             Cancel Booking
           </button>
-          <button className="btn outline" style={{ padding: "8px 14px", fontSize: "14px" }}>
+          <button
+            className="btn outline"
+            style={{ padding: "8px 14px", fontSize: "14px" }}
+            onClick={() => onChat?.(rental)}
+          >
             Chat with Owner
           </button>
         </div>

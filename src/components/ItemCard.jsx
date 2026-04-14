@@ -13,6 +13,8 @@ function ItemCard({ item }) {
   const numReviews = item.reviewsCount ? `(${item.reviewsCount})` : "(0)";
   const badgeLabel = item.isVerified ? "Verified" : "Featured";
 
+  const isUnavailable = Boolean(item.isUnavailable);
+
   return (
     <article
       className="marketplace-card"
@@ -51,8 +53,10 @@ function ItemCard({ item }) {
           <button
             type="button"
             className="btn primary"
+            disabled={isUnavailable}
             onClick={(e) => {
               e.stopPropagation();
+              if (isUnavailable) return;
               navigate(`/booking/${item.id}`);
             }}
           >

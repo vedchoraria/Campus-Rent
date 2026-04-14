@@ -1,6 +1,6 @@
 import React from "react";
 
-function CompletedRentalCard({ rental, onRateOwner }) {
+function PendingRequestCard({ request, onCancel, onMessageOwner }) {
   return (
     <div
       style={{
@@ -15,15 +15,15 @@ function CompletedRentalCard({ rental, onRateOwner }) {
       }}
     >
       <div
-        className={`marketplace-card-media ${rental.image || "teal"}`}
+        className={`marketplace-card-media ${request.image || "teal"}`}
         style={{ width: "160px", height: "120px", borderRadius: "12px" }}
       />
 
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: "12px" }}>
           <div>
-            <h3 style={{ margin: 0, fontSize: "18px", fontWeight: 700 }}>{rental.name}</h3>
-            <p style={{ margin: "6px 0 0", color: "var(--muted, #6b7280)" }}>Owner: {rental.owner}</p>
+            <h3 style={{ margin: 0, fontSize: "18px", fontWeight: 700 }}>{request.name}</h3>
+            <p style={{ margin: "6px 0 0", color: "var(--muted, #6b7280)" }}>Owner: {request.owner}</p>
           </div>
           <span
             style={{
@@ -32,26 +32,38 @@ function CompletedRentalCard({ rental, onRateOwner }) {
               borderRadius: "999px",
               fontSize: "12px",
               fontWeight: 600,
-              background: "rgba(16, 185, 129, 0.12)",
-              color: "var(--primary, #0d9488)",
-              border: "1px solid rgba(16, 185, 129, 0.25)",
+              background: "rgba(59, 130, 246, 0.12)",
+              color: "#2563eb",
+              border: "1px solid rgba(59, 130, 246, 0.25)",
             }}
           >
-            Completed
+            Awaiting approval
           </span>
         </div>
 
         <div style={{ display: "grid", gap: "6px", color: "var(--muted, #6b7280)", fontSize: "14px" }}>
-          <div>Returned on {rental.returned}</div>
+          <div>Requested dates: {request.dates}</div>
+          <div>Request submitted: {request.submitted}</div>
+          <div>Estimated total: {request.total}</div>
         </div>
 
         <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+          <button className="btn outline" style={{ padding: "8px 14px", fontSize: "14px" }}>
+            Edit request
+          </button>
+          <button
+            className="btn outline"
+            style={{ padding: "8px 14px", fontSize: "14px", borderColor: "#e11d48", color: "#e11d48" }}
+            onClick={() => onCancel?.(request)}
+          >
+            Cancel request
+          </button>
           <button
             className="btn outline"
             style={{ padding: "8px 14px", fontSize: "14px" }}
-            onClick={() => onRateOwner?.(rental)}
+            onClick={() => onMessageOwner?.(request)}
           >
-            Rate Owner
+            Message owner
           </button>
         </div>
       </div>
@@ -59,4 +71,4 @@ function CompletedRentalCard({ rental, onRateOwner }) {
   );
 }
 
-export default CompletedRentalCard;
+export default PendingRequestCard;

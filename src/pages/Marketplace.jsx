@@ -18,6 +18,8 @@ const locations = [
 
 import mockData from "../data/mockData.js";
 import ItemCard from "../components/ItemCard.jsx";
+import { useBookings } from "../context/BookingContext.jsx";
+import { BOOKING_STATUS } from "../constants/bookingStatus.js";
 
 function Marketplace() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -27,6 +29,7 @@ function Marketplace() {
   const [sortOption, setSortOption] = useState("Newest");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const { bookings } = useBookings();
 
   // Debounce search input
   useEffect(() => {
@@ -45,6 +48,11 @@ function Marketplace() {
   }, []);
 
   const filteredAndSortedListings = useMemo(() => {
+    const blockedStatuses = new Set([BOOKING_STATUS.upcoming, BOOKING_STATUS.ongoing]);
+    const blockedItemIds = new Set(
+      bookings.filter((booking) => blockedStatuses.has(booking.status)).map((booking) => booking.itemId)
+    );
+
     let result = [...mockData];
 
     // Search filter
@@ -79,8 +87,11 @@ function Marketplace() {
       return 0;
     });
 
-    return result;
-  }, [debouncedSearch, activeCategory, activeLocation, sortOption]);
+    return result.map((item) => ({
+      ...item,
+      isUnavailable: blockedItemIds.has(item.id),
+    }));
+  }, [debouncedSearch, activeCategory, activeLocation, sortOption, bookings]);
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);

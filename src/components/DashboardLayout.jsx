@@ -45,13 +45,10 @@ function DashboardLayout() {
             Profile
           </NavLink>
           <NavLink to="/dashboard/rentals" style={getNavLinkStyle}>
-            My Rentals
+            My Borrowings
           </NavLink>
           <NavLink to="/dashboard/listings" style={getNavLinkStyle}>
             My Listings
-          </NavLink>
-          <NavLink to="/dashboard/requests" style={getNavLinkStyle}>
-            Requests
           </NavLink>
         </nav>
 

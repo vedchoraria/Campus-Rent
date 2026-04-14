@@ -1,6 +1,6 @@
 import React from "react";
 
-function BorrowedItemCard({ rental }) {
+function BorrowedItemCard({ rental, onMarkReturned, onReportIssue, onChat }) {
   return (
     <div
       style={{
@@ -32,16 +32,25 @@ function BorrowedItemCard({ rental }) {
         </div>
 
         <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-          <button className="btn primary" style={{ padding: "8px 14px", fontSize: "14px" }}>
+          <button
+            className="btn primary"
+            style={{ padding: "8px 14px", fontSize: "14px" }}
+            onClick={() => onMarkReturned?.(rental)}
+          >
             Mark as Returned
           </button>
           <button
             className="btn outline"
             style={{ padding: "8px 14px", fontSize: "14px", borderColor: "#e11d48", color: "#e11d48" }}
+            onClick={() => onReportIssue?.(rental)}
           >
             Report Issue
           </button>
-          <button className="btn outline" style={{ padding: "8px 14px", fontSize: "14px" }}>
+          <button
+            className="btn outline"
+            style={{ padding: "8px 14px", fontSize: "14px" }}
+            onClick={() => onChat?.(rental)}
+          >
             Chat with Owner
           </button>
         </div>

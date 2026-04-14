@@ -1,4 +1,94 @@
-export const userBookings = [];
+import { BOOKING_STATUS } from "../constants/bookingStatus.js";
+
+export const userBookings = [
+  {
+    id: "b_p1",
+    itemId: "m5",
+    title: "Canon AE-1 Program",
+    image: "blue",
+    start: "2026-04-18",
+    end: "2026-04-21",
+    status: BOOKING_STATUS.pending,
+    owner: "Priya S.",
+    requester: "Anika Shah",
+    submittedAt: "2026-04-14",
+    totalAmount: 2800,
+    depositAmount: 4000
+  },
+  {
+    id: "b_p2",
+    itemId: "m4",
+    title: "North Face Stormbreak 2",
+    image: "teal",
+    start: "2026-04-22",
+    end: "2026-04-24",
+    status: BOOKING_STATUS.pending,
+    owner: "Omar K.",
+    requester: "Ravi Malhotra",
+    submittedAt: "2026-04-13",
+    totalAmount: 1900,
+    depositAmount: 3000
+  },
+  {
+    id: "b_u1",
+    itemId: "m5",
+    title: "Canon AE-1 Program",
+    image: "blue",
+    start: "2026-04-20",
+    end: "2026-04-23",
+    status: BOOKING_STATUS.upcoming,
+    owner: "Priya S.",
+    pickupAt: "2026-04-20T10:00:00",
+    totalAmount: 3000,
+    depositAmount: 4000
+  },
+  {
+    id: "b_o1",
+    itemId: "m3",
+    title: "Sony WH-1000XM5",
+    image: "coral",
+    start: "2026-04-10",
+    end: "2026-04-15",
+    status: BOOKING_STATUS.ongoing,
+    owner: "Samira Patel",
+    totalAmount: 3200,
+    depositAmount: 5000
+  },
+  {
+    id: "b_o2",
+    itemId: "m1",
+    title: "MacBook Pro M2 - 2023",
+    image: "blue",
+    start: "2026-04-12",
+    end: "2026-04-16",
+    status: BOOKING_STATUS.ongoing,
+    owner: "Alex Rivera",
+    totalAmount: 6000,
+    depositAmount: 25000
+  },
+  {
+    id: "b_c1",
+    itemId: "m6",
+    title: "Organic Chemistry 8th Ed",
+    image: "coral",
+    start: "2026-03-20",
+    end: "2026-03-27",
+    status: BOOKING_STATUS.completed,
+    owner: "Ravi Malhotra",
+    returnedAt: "2026-03-28"
+  },
+  {
+    id: "b_c2",
+    itemId: "m2",
+    title: "DJI Mini 3 Drone",
+    image: "blue",
+    start: "2026-03-30",
+    end: "2026-04-03",
+    status: BOOKING_STATUS.completed,
+    owner: "Jenny L.",
+    returnedAt: "2026-04-04"
+  }
+];
 
 export const mockUsers = [
   {

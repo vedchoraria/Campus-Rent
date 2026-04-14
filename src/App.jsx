@@ -14,7 +14,6 @@ import Login from "./pages/Login.jsx";
 import Signup from "./pages/Signup.jsx";
 import DashboardLayout from "./components/DashboardLayout.jsx";
 import Profile from "./pages/Profile.jsx";
-import Requests from "./pages/Requests.jsx";
 import MyListings from "./pages/MyListings.jsx";
 
 function ProtectedRoute({ children }) {
@@ -49,7 +48,6 @@ function App() {
               <Route path="profile" element={<Profile />} />
               <Route path="rentals" element={<MyBookings />} />
               <Route path="listings" element={<MyListings />} />
-              <Route path="requests" element={<Requests />} />
             </Route>
           </Routes>
         </div>

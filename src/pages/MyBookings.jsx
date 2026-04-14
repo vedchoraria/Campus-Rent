@@ -1,87 +1,121 @@
-﻿import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import BorrowedItemCard from "../components/BorrowedItemCard.jsx";
 import UpcomingRentalCard from "../components/UpcomingRentalCard.jsx";
 import CompletedRentalCard from "../components/CompletedRentalCard.jsx";
+import PendingRequestCard from "../components/PendingRequestCard.jsx";
+import mockData from "../data/mockData.js";
+import { BOOKING_STATUS } from "../constants/bookingStatus.js";
+import { useBookings } from "../context/BookingContext.jsx";
 
-const tabs = ["Ongoing", "Upcoming", "Completed"];
+const tabs = ["Pending", "Upcoming", "Ongoing", "Completed"];
 
-const mockOngoing = [
-  {
-    id: "o1",
-    name: "Sony WH-1000XM5",
-    owner: "Samira Patel",
-    dates: "Apr 10 - Apr 15",
-    deposit: "₹5,000",
-    total: "₹3,200",
-    image: "teal",
-  },
-  {
-    id: "o2",
-    name: "MacBook Pro M2",
-    owner: "Alex Rivera",
-    dates: "Apr 12 - Apr 16",
-    deposit: "₹25,000",
-    total: "₹6,000",
-    image: "blue",
-  },
-];
 
-const mockUpcoming = [
-  {
-    id: "u1",
-    name: "Canon AE-1 Program",
-    owner: "Priya S.",
-    pickup: "Apr 20, 10:00 AM",
-    dates: "Apr 20 - Apr 23",
-    image: "coral",
-  },
-  {
-    id: "u2",
-    name: "North Face Stormbreak 2",
-    owner: "Omar K.",
-    pickup: "Apr 26, 6:00 PM",
-    dates: "Apr 26 - Apr 28",
-    image: "teal",
-  },
-];
+const formatShortDate = (value) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "2-digit" }).format(date);
+};
 
-const mockCompleted = [
-  {
-    id: "c1",
-    name: "DJI Mini 3 Drone",
-    owner: "Jenny L.",
-    returned: "Apr 04, 2026",
-    image: "blue",
-  },
-  {
-    id: "c2",
-    name: "Organic Chemistry 8th Ed",
-    owner: "Ravi Malhotra",
-    returned: "Mar 28, 2026",
-    image: "coral",
-  },
-];
+const formatFullDate = (value) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "2-digit", year: "numeric" }).format(date);
+};
+
+const formatPickupDate = (value) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "2-digit",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+};
+
+const formatRange = (start, end) => {
+  if (!start && !end) return "";
+  return `${formatShortDate(start)} - ${formatShortDate(end)}`;
+};
+
+const formatCurrency = (value) => {
+  if (typeof value !== "number") return "";
+  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value);
+};
 
 function MyBookings() {
   const [activeTab, setActiveTab] = useState(tabs[0]);
+
+  const { bookings, cancelBooking, markReturned } = useBookings();
+  const handleComingSoon = () => {
+    window.alert("Feature coming soon");
+  };
+
+  const { pending, upcoming, ongoing, completed } = useMemo(() => {
+    const itemLookup = mockData.reduce((acc, item) => {
+      acc[item.id] = item;
+      return acc;
+    }, {});
+
+    const normalized = bookings
+      .map((booking) => {
+        const item = itemLookup[booking.itemId];
+        const name = booking.title || item?.title || "Item";
+        const image = booking.image || item?.images?.[0] || item?.imageClass || "teal";
+        const owner = booking.owner || "CampusRent Owner";
+        const dates = formatRange(booking.start, booking.end);
+        const submitted = formatFullDate(booking.submittedAt);
+        const pickup = formatPickupDate(booking.pickupAt || booking.start);
+        const returned = formatFullDate(booking.returnedAt || booking.end);
+        const deposit = formatCurrency(booking.depositAmount ?? item?.securityDeposit);
+        const total = formatCurrency(booking.totalAmount);
+        return {
+          id: booking.id,
+          status: booking.status,
+          name,
+          owner,
+          dates,
+          submitted,
+          pickup,
+          returned,
+          deposit,
+          total,
+          image,
+        };
+      })
+      .filter((booking) => booking.status);
+
+    return {
+      pending: normalized.filter((booking) => booking.status === BOOKING_STATUS.pending),
+      upcoming: normalized.filter((booking) => booking.status === BOOKING_STATUS.upcoming),
+      ongoing: normalized.filter((booking) => booking.status === BOOKING_STATUS.ongoing),
+      completed: normalized.filter((booking) => booking.status === BOOKING_STATUS.completed),
+    };
+  }, [bookings]);
+
+  const stats = [
+    { label: "Pending Requests", value: String(pending.length) },
+    { label: "Upcoming Pickups", value: String(upcoming.length) },
+    { label: "Ongoing Borrowings", value: String(ongoing.length) },
+    { label: "Completed Borrowings", value: String(completed.length) },
+  ];
 
   return (
     <section style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
       <div>
         <h1 style={{ fontSize: "32px", fontFamily: '"Space Grotesk", sans-serif', marginBottom: "8px" }}>
-          Borrowed Items
+          My Borrowings
         </h1>
         <p style={{ color: "var(--muted, #6b7280)" }}>
-          Track your current, upcoming, and completed borrowings.
+          Track pending approvals, upcoming pickups, active borrowings, and completed returns.
         </p>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "16px" }}>
-        {[
-          { label: "Currently Borrowed", value: "2" },
-          { label: "Upcoming Pickups", value: "2" },
-          { label: "Completed Rentals", value: "5" },
-        ].map((stat) => (
+        {stats.map((stat) => (
           <div
             key={stat.label}
             style={{
@@ -118,26 +152,50 @@ function MyBookings() {
         ))}
       </div>
 
+      {activeTab === "Pending" && (
+        <div style={{ display: "grid", gap: "16px" }}>
+          {pending.map((request) => (
+            <PendingRequestCard
+              key={request.id}
+              request={request}
+              onCancel={() => cancelBooking(request.id)}
+              onMessageOwner={handleComingSoon}
+            />
+          ))}
+        </div>
+      )}
+
       {activeTab === "Ongoing" && (
         <div style={{ display: "grid", gap: "16px" }}>
-          {mockOngoing.map((rental) => (
-            <BorrowedItemCard key={rental.id} rental={rental} />
+          {ongoing.map((rental) => (
+            <BorrowedItemCard
+              key={rental.id}
+              rental={rental}
+              onMarkReturned={() => markReturned(rental.id)}
+              onReportIssue={handleComingSoon}
+              onChat={handleComingSoon}
+            />
           ))}
         </div>
       )}
 
       {activeTab === "Upcoming" && (
         <div style={{ display: "grid", gap: "16px" }}>
-          {mockUpcoming.map((rental) => (
-            <UpcomingRentalCard key={rental.id} rental={rental} />
+          {upcoming.map((rental) => (
+            <UpcomingRentalCard
+              key={rental.id}
+              rental={rental}
+              onCancel={() => cancelBooking(rental.id)}
+              onChat={handleComingSoon}
+            />
           ))}
         </div>
       )}
 
       {activeTab === "Completed" && (
         <div style={{ display: "grid", gap: "16px" }}>
-          {mockCompleted.map((rental) => (
-            <CompletedRentalCard key={rental.id} rental={rental} />
+          {completed.map((rental) => (
+            <CompletedRentalCard key={rental.id} rental={rental} onRateOwner={handleComingSoon} />
           ))}
         </div>
       )}

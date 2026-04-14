@@ -65,7 +65,7 @@ function Navbar() {
             {isOpen && (
               <div className="dropdown-menu">
                 <Link to="/dashboard/profile" className="dropdown-item" onClick={() => setIsOpen(false)}>⚙️ Profile</Link>
-                <Link to="/dashboard/rentals" className="dropdown-item" onClick={() => setIsOpen(false)}>📦 My Rentals</Link>
+                <Link to="/dashboard/rentals" className="dropdown-item" onClick={() => setIsOpen(false)}>📦 My Borrowings</Link>
                 <Link to="/dashboard/listings" className="dropdown-item" onClick={() => setIsOpen(false)}>📋 My Listings</Link>
                 <hr className="dropdown-divider" />
                 <button onClick={handleLogout} className="dropdown-item text-danger">Logout</button>

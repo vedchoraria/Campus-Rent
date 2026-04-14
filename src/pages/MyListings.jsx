@@ -1,7 +1,9 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import ListingCard from "../components/ListingCard.jsx";
 import ApprovalCard from "../components/ApprovalCard.jsx";
 import RentalHistoryCard from "../components/RentalHistoryCard.jsx";
+import { BOOKING_STATUS } from "../constants/bookingStatus.js";
+import { useBookings } from "../context/BookingContext.jsx";
 
 const tabs = ["Active Listings", "Pending Approvals", "Rental History"];
 
@@ -38,33 +40,42 @@ const mockListings = [
   },
 ];
 
-const mockApprovals = [
-  {
-    id: "a1",
-    title: "Canon AE-1 Program",
-    requester: "Anika Shah",
-    dates: "Apr 19 - Apr 21",
-    status: "Pending",
-  },
-  {
-    id: "a2",
-    title: "Organic Chemistry 8th Ed",
-    requester: "Ravi Malhotra",
-    dates: "Apr 23 - Apr 26",
-    status: "Pending",
-  },
-];
-
 const mockHistory = [
   { id: "h1", item: "DJI Mini 3 Drone", renter: "Priya S.", dates: "Mar 10 - Mar 13", total: "₹4,800" },
   { id: "h2", item: "Sony WH-1000XM5", renter: "Omar K.", dates: "Feb 22 - Feb 24", total: "₹1,600" },
   { id: "h3", item: "Organic Chemistry 8th Ed", renter: "Jenny L.", dates: "Jan 05 - Jan 12", total: "₹2,100" },
 ];
 
+const formatShortDate = (value) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "2-digit" }).format(date);
+};
+
+const formatRange = (start, end) => {
+  if (!start && !end) return "";
+  return `${formatShortDate(start)} - ${formatShortDate(end)}`;
+};
+
 function MyListings() {
   const [activeTab, setActiveTab] = useState(tabs[0]);
   const [listings, setListings] = useState(mockListings);
-  const [approvals, setApprovals] = useState(mockApprovals);
+  const { bookings, approveBooking, rejectBooking, markReturned } = useBookings();
+
+  const approvals = useMemo(
+    () =>
+      bookings
+        .filter((booking) => booking.status === BOOKING_STATUS.pending)
+        .map((booking) => ({
+          id: booking.id,
+          title: booking.title,
+          requester: booking.requester || "CampusRent User",
+          dates: formatRange(booking.start, booking.end),
+          status: booking.status,
+        })),
+    [bookings]
+  );
 
   const handleEditListing = (item) => {
     window.alert(`Edit listing: ${item.name}`);
@@ -90,16 +101,20 @@ function MyListings() {
   };
 
   const handleApprove = (approval) => {
-    setApprovals((prev) =>
-      prev.map((entry) => (entry.id === approval.id ? { ...entry, status: "Approved" } : entry))
-    );
+    approveBooking(approval.id);
   };
 
   const handleReject = (approval) => {
-    setApprovals((prev) => prev.filter((entry) => entry.id !== approval.id));
+    rejectBooking(approval.id);
   };
 
   const handleMarkReturned = (item) => {
+    const activeBooking = bookings.find(
+      (booking) => booking.itemId === item.id && booking.status === BOOKING_STATUS.ongoing
+    );
+    if (activeBooking) {
+      markReturned(activeBooking.id);
+    }
     setListings((prev) =>
       prev.map((listing) =>
         listing.id === item.id ? { ...listing, status: "Available", currentRental: null } : listing

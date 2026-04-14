@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
-import mockData, { userBookings } from "../data/mockData.js";
 import BookingForm from "../components/BookingForm.jsx";
 import PriceBreakdown from "../components/PriceBreakdown.jsx";
 import { checkAvailability } from "../utils/bookingUtils.js";
+import mockData from "../data/mockData.js";
+import { BOOKING_STATUS } from "../constants/bookingStatus.js";
+import { useBookings } from "../context/BookingContext.jsx";
 
 function Booking() {
   const { id } = useParams();
@@ -16,6 +18,7 @@ function Booking() {
   const [startDate, setStartDate] = useState(stateContext.startDate || "");
   const [endDate, setEndDate] = useState(stateContext.endDate || "");
   const [error, setError] = useState("");
+  const { setBookings } = useBookings();
 
   useEffect(() => {
     if (!startDate) {
@@ -97,9 +100,9 @@ function Booking() {
       }
       item.bookings.push({ start: startDate, end: endDate });
 
-      // Save centralized representation to global userBookings for /my-bookings view
+      // Save centralized representation to global booking state for /my-borrowings view
       const bookingId = `REQ-${Date.now()}`;
-      userBookings.push({
+      const newBooking = {
         id: bookingId,
         itemId: item.id,
         title: item.title,
@@ -109,8 +112,10 @@ function Booking() {
         rentalAmount: totalItemPrice,
         depositAmount: item.securityDeposit || 0,
         totalAmount: finalTotal,
-        status: "confirmed"
-      });
+        status: BOOKING_STATUS.upcoming,
+      };
+
+      setBookings((prev) => [...prev, newBooking]);
 
       navigate("/chat", { state: { bookingRef: bookingId } });
     }
