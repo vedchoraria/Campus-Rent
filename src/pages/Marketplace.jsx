@@ -16,7 +16,7 @@ const locations = [
   "Arts District",
 ];
 
-import mockData from "../data/mockData.js";
+import { useListings } from "../context/ListingContext.jsx";
 import ItemCard from "../components/ItemCard.jsx";
 import { useBookings } from "../context/BookingContext.jsx";
 import { BOOKING_STATUS } from "../constants/bookingStatus.js";
@@ -29,6 +29,7 @@ function Marketplace() {
   const [sortOption, setSortOption] = useState("Newest");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const { listings } = useListings();
   const { bookings } = useBookings();
 
   // Debounce search input
@@ -53,7 +54,7 @@ function Marketplace() {
       bookings.filter((booking) => blockedStatuses.has(booking.status)).map((booking) => booking.itemId)
     );
 
-    let result = [...mockData];
+    let result = listings.filter(item => !item.isHidden);
 
     // Search filter
     if (debouncedSearch) {
@@ -91,7 +92,7 @@ function Marketplace() {
       ...item,
       isUnavailable: blockedItemIds.has(item.id),
     }));
-  }, [debouncedSearch, activeCategory, activeLocation, sortOption, bookings]);
+  }, [debouncedSearch, activeCategory, activeLocation, sortOption, bookings, listings]);
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);

@@ -4,41 +4,9 @@ import ApprovalCard from "../components/ApprovalCard.jsx";
 import RentalHistoryCard from "../components/RentalHistoryCard.jsx";
 import { BOOKING_STATUS } from "../constants/bookingStatus.js";
 import { useBookings } from "../context/BookingContext.jsx";
+import { useListings } from "../context/ListingContext.jsx";
 
 const tabs = ["Active Listings", "Pending Approvals", "Rental History"];
-
-const mockListings = [
-  {
-    id: "l1",
-    name: "Sony A7 III + 35mm",
-    price: "₹2,500",
-    status: "Available",
-    image: "teal",
-    nextReservation: { dates: "Apr 18 - Apr 20", renter: "Anika Shah" },
-    upcoming: [
-      { id: "u1", dates: "Apr 22 - Apr 24", renter: "Priya S." },
-      { id: "u2", dates: "Apr 27 - Apr 28", renter: "Ravi Malhotra" },
-    ],
-  },
-  {
-    id: "l2",
-    name: "MacBook Pro M2",
-    price: "₹1,500",
-    status: "Rented",
-    image: "blue",
-    currentRental: { dates: "Apr 12 - Apr 16", renter: "Omar K." },
-    upcoming: [{ id: "u3", dates: "Apr 20 - Apr 22", renter: "Jenny L." }],
-  },
-  {
-    id: "l3",
-    name: "North Face Stormbreak 2",
-    price: "₹1,200",
-    status: "Hidden",
-    image: "coral",
-    nextReservation: null,
-    upcoming: [],
-  },
-];
 
 const mockHistory = [
   { id: "h1", item: "DJI Mini 3 Drone", renter: "Priya S.", dates: "Mar 10 - Mar 13", total: "₹4,800" },
@@ -60,8 +28,46 @@ const formatRange = (start, end) => {
 
 function MyListings() {
   const [activeTab, setActiveTab] = useState(tabs[0]);
-  const [listings, setListings] = useState(mockListings);
+  const { listings, toggleHidden, deleteListing } = useListings();
   const { bookings, approveBooking, rejectBooking, markReturned } = useBookings();
+
+  const formattedListings = useMemo(() => {
+    return listings.map(item => {
+      const itemBookings = bookings.filter(b => String(b.itemId) === String(item.id));
+      const ongoing = itemBookings.find(b => b.status === BOOKING_STATUS.ongoing);
+      const upcoming = itemBookings.filter(b => b.status === BOOKING_STATUS.upcoming);
+      
+      upcoming.sort((a,b) => new Date(a.start) - new Date(b.start));
+
+      const nextReservation = upcoming.length > 0 ? {
+        dates: formatRange(upcoming[0].start, upcoming[0].end),
+        renter: upcoming[0].requester || "Student"
+      } : null;
+
+      let status = "Available";
+      if (item.isHidden) status = "Hidden";
+      else if (ongoing) status = "Rented";
+
+      return {
+        id: item.id,
+        name: item.title,
+        price: `₹${item.pricePerDay}`,
+        status,
+        image: item.images?.[0] || 'teal',
+        currentRental: ongoing ? {
+          dates: formatRange(ongoing.start, ongoing.end),
+          renter: ongoing.requester || "Student"
+        } : null,
+        nextReservation,
+        upcoming: upcoming.map(b => ({
+          id: b.id,
+          dates: formatRange(b.start, b.end),
+          renter: b.requester || "Student"
+        })),
+        rawItem: item
+      };
+    });
+  }, [listings, bookings]);
 
   const approvals = useMemo(
     () =>
@@ -82,22 +88,11 @@ function MyListings() {
   };
 
   const handleToggleHidden = (item) => {
-    setListings((prev) =>
-      prev.map((listing) => {
-        if (listing.id !== item.id) return listing;
-        if (listing.status === "Hidden") {
-          return { ...listing, status: "Available" };
-        }
-        if (listing.status === "Available") {
-          return { ...listing, status: "Hidden" };
-        }
-        return listing;
-      })
-    );
+    toggleHidden(item.id);
   };
 
   const handleDeleteListing = (item) => {
-    setListings((prev) => prev.filter((listing) => listing.id !== item.id));
+    deleteListing(item.id);
   };
 
   const handleApprove = (approval) => {
@@ -110,16 +105,11 @@ function MyListings() {
 
   const handleMarkReturned = (item) => {
     const activeBooking = bookings.find(
-      (booking) => booking.itemId === item.id && booking.status === BOOKING_STATUS.ongoing
+      (booking) => String(booking.itemId) === String(item.id) && booking.status === BOOKING_STATUS.ongoing
     );
     if (activeBooking) {
       markReturned(activeBooking.id);
     }
-    setListings((prev) =>
-      prev.map((listing) =>
-        listing.id === item.id ? { ...listing, status: "Available", currentRental: null } : listing
-      )
-    );
   };
 
   return (
@@ -177,7 +167,7 @@ function MyListings() {
 
       {activeTab === "Active Listings" && (
         <div style={{ display: "grid", gap: "16px" }}>
-          {listings.map((item) => (
+          {formattedListings.map((item) => (
             <ListingCard
               key={item.id}
               item={item}
