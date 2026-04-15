@@ -29,7 +29,7 @@ const formatRange = (start, end) => {
 function MyListings() {
   const [activeTab, setActiveTab] = useState(tabs[0]);
   const { listings, toggleHidden, deleteListing } = useListings();
-  const { bookings, approveBooking, rejectBooking, markReturned } = useBookings();
+  const { bookings, approveBooking, rejectBooking, markReturned, cancelBooking } = useBookings();
 
   const formattedListings = useMemo(() => {
     return listings.map(item => {
@@ -44,15 +44,14 @@ function MyListings() {
         renter: upcoming[0].requester || "Student"
       } : null;
 
-      let status = "Available";
-      if (item.isHidden) status = "Hidden";
-      else if (ongoing) status = "Rented";
+      let status = ongoing ? "Rented" : "Available";
 
       return {
         id: item.id,
         name: item.title,
         price: `₹${item.pricePerDay}`,
         status,
+        isHidden: item.isHidden,
         image: item.images?.[0] || 'teal',
         currentRental: ongoing ? {
           dates: formatRange(ongoing.start, ongoing.end),
@@ -69,19 +68,21 @@ function MyListings() {
     });
   }, [listings, bookings]);
 
-  const approvals = useMemo(
-    () =>
-      bookings
-        .filter((booking) => booking.status === BOOKING_STATUS.pending)
-        .map((booking) => ({
+  const approvals = useMemo(() => {
+    const listingIds = new Set(listings.map(l => String(l.id)));
+    return bookings
+      .filter((booking) => booking.status === BOOKING_STATUS.pending && listingIds.has(String(booking.itemId)))
+      .map((booking) => {
+        const item = listings.find((l) => String(l.id) === String(booking.itemId));
+        return {
           id: booking.id,
-          title: booking.title,
+          title: item?.title || booking.title,
           requester: booking.requester || "CampusRent User",
           dates: formatRange(booking.start, booking.end),
           status: booking.status,
-        })),
-    [bookings]
-  );
+        };
+      });
+  }, [bookings, listings]);
 
   const handleEditListing = (item) => {
     window.alert(`Edit listing: ${item.name}`);
@@ -110,6 +111,10 @@ function MyListings() {
     if (activeBooking) {
       markReturned(activeBooking.id);
     }
+  };
+
+  const handleCancelUpcoming = (bookingId) => {
+    cancelBooking(bookingId);
   };
 
   return (
@@ -175,6 +180,7 @@ function MyListings() {
               onToggleHidden={handleToggleHidden}
               onDelete={handleDeleteListing}
               onMarkReturned={handleMarkReturned}
+              onCancelUpcoming={handleCancelUpcoming}
             />
           ))}
         </div>

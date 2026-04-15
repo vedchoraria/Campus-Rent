@@ -18,7 +18,7 @@ const statusStyles = {
   },
 };
 
-function ListingCard({ item, onEdit, onToggleHidden, onDelete, onMarkReturned }) {
+function ListingCard({ item, onEdit, onToggleHidden, onDelete, onMarkReturned, onCancelUpcoming }) {
   const badgeStyle = statusStyles[item.status] || statusStyles.Available;
   const hasUpcoming = item.upcoming?.length > 0;
 
@@ -46,17 +46,32 @@ function ListingCard({ item, onEdit, onToggleHidden, onDelete, onMarkReturned })
             <h3 style={{ margin: 0, fontSize: "18px", fontWeight: 700 }}>{item.name}</h3>
             <p style={{ margin: "6px 0 0", color: "var(--muted, #6b7280)" }}>{item.price}/day</p>
           </div>
-          <span
-            style={{
-              padding: "6px 12px",
-              borderRadius: "999px",
-              fontSize: "12px",
-              fontWeight: 600,
-              ...badgeStyle,
-            }}
-          >
-            {item.status}
-          </span>
+          <div style={{ display: "flex", gap: "8px" }}>
+            <span
+              style={{
+                padding: "6px 12px",
+                borderRadius: "999px",
+                fontSize: "12px",
+                fontWeight: 600,
+                ...badgeStyle,
+              }}
+            >
+              {item.status}
+            </span>
+            {item.isHidden && (
+              <span
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: "999px",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  ...statusStyles.Hidden,
+                }}
+              >
+                Hidden
+              </span>
+            )}
+          </div>
         </div>
 
         {item.status === "Available" && (
@@ -100,9 +115,18 @@ function ListingCard({ item, onEdit, onToggleHidden, onDelete, onMarkReturned })
                     border: "1px solid var(--border, #e5e7eb)",
                     fontSize: "13px",
                     color: "var(--muted, #6b7280)",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center"
                   }}
                 >
-                  {reservation.dates} · {reservation.renter}
+                  <span>{reservation.dates} · {reservation.renter}</span>
+                  <button 
+                    onClick={() => onCancelUpcoming?.(reservation.id)}
+                    style={{ background: 'none', border: 'none', color: '#e11d48', cursor: 'pointer', fontSize: '13px', fontWeight: 600, padding: '4px 8px' }}
+                  >
+                    Cancel
+                  </button>
                 </div>
               ))}
             </div>
@@ -122,7 +146,7 @@ function ListingCard({ item, onEdit, onToggleHidden, onDelete, onMarkReturned })
             style={{ padding: "8px 14px", fontSize: "14px" }}
             onClick={() => onToggleHidden?.(item)}
           >
-            Hide Listing
+            {item.isHidden ? "Unhide Listing" : "Hide Listing"}
           </button>
           <button
             className="btn outline"
