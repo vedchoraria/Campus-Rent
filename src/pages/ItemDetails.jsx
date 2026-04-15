@@ -6,11 +6,14 @@ import ItemInfo from "../components/ItemInfo.jsx";
 import BookingForm from "../components/BookingForm.jsx";
 import PriceBreakdown from "../components/PriceBreakdown.jsx";
 import { checkAvailability } from "../utils/bookingUtils.js";
+import { useBookings } from "../context/BookingContext.jsx";
+import { BOOKING_STATUS } from "../constants/bookingStatus.js";
 
 function ItemDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const item = mockData.find((entry) => String(entry.id) === String(id));
+  const { bookings } = useBookings();
 
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -51,7 +54,12 @@ function ItemDetails() {
         return false;
       }
       
-      const availability = checkAvailability(start, end, item.bookings);
+      const activeBookings = bookings.filter(
+        (b) => String(b.itemId) === String(item.id) && 
+               (b.status === BOOKING_STATUS.upcoming || b.status === BOOKING_STATUS.ongoing)
+      );
+
+      const availability = checkAvailability(start, end, activeBookings);
       if (!availability.isAvailable) {
         setError(`Item is already booked from ${availability.conflict.start} to ${availability.conflict.end}.`);
         return false;
