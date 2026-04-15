@@ -8,11 +8,7 @@ import { useListings } from "../context/ListingContext.jsx";
 
 const tabs = ["Active Listings", "Pending Approvals", "Rental History"];
 
-const mockHistory = [
-  { id: "h1", item: "DJI Mini 3 Drone", renter: "Priya S.", dates: "Mar 10 - Mar 13", total: "₹4,800" },
-  { id: "h2", item: "Sony WH-1000XM5", renter: "Omar K.", dates: "Feb 22 - Feb 24", total: "₹1,600" },
-  { id: "h3", item: "Organic Chemistry 8th Ed", renter: "Jenny L.", dates: "Jan 05 - Jan 12", total: "₹2,100" },
-];
+// Removed statically coded mock history
 
 const formatShortDate = (value) => {
   if (!value) return "";
@@ -79,7 +75,22 @@ function MyListings() {
           title: item?.title || booking.title,
           requester: booking.requester || "CampusRent User",
           dates: formatRange(booking.start, booking.end),
-          status: booking.status,
+        };
+      });
+  }, [bookings, listings]);
+
+  const history = useMemo(() => {
+    const listingIds = new Set(listings.map(l => String(l.id)));
+    return bookings
+      .filter((booking) => booking.status === BOOKING_STATUS.completed && listingIds.has(String(booking.itemId)))
+      .map((booking) => {
+        const item = listings.find((l) => String(l.id) === String(booking.itemId));
+        return {
+          id: booking.id,
+          item: item?.title || booking.title || "Unspecified Item",
+          renter: booking.requester || "CampusRent User",
+          dates: formatRange(booking.start, booking.end),
+          total: `₹${booking.totalAmount || 0}`,
         };
       });
   }, [bookings, listings]);
@@ -201,7 +212,7 @@ function MyListings() {
 
       {activeTab === "Rental History" && (
         <div style={{ display: "grid", gap: "16px" }}>
-          {mockHistory.map((rental) => (
+          {history.map((rental) => (
             <RentalHistoryCard key={rental.id} rental={rental} />
           ))}
         </div>

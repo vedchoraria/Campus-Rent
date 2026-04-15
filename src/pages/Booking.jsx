@@ -18,7 +18,7 @@ function Booking() {
   const [startDate, setStartDate] = useState(stateContext.startDate || "");
   const [endDate, setEndDate] = useState(stateContext.endDate || "");
   const [error, setError] = useState("");
-  const { setBookings } = useBookings();
+  const { bookings, setBookings } = useBookings();
 
   useEffect(() => {
     if (!startDate) {
@@ -67,7 +67,7 @@ function Booking() {
         return false;
       }
 
-      const availability = checkAvailability(start, end, item.bookings);
+      const activeBookings = bookings.filter(b => String(b.itemId) === String(item.id) && (b.status === BOOKING_STATUS.upcoming || b.status === BOOKING_STATUS.ongoing)); const availability = checkAvailability(start, end, activeBookings);
       if (!availability.isAvailable) {
         setError(`Item is already booked from ${availability.conflict.start} to ${availability.conflict.end}.`);
         return false;
@@ -95,10 +95,10 @@ function Booking() {
   const handleConfirm = () => {
     if (isValid) {
       // Mock Persistence: Save the booking explicitly in memory so it reflects instantly for overlap logic
-      if (!item.bookings) {
-        item.bookings = [];
-      }
-      item.bookings.push({ start: startDate, end: endDate });
+        // Removed mock array push
+        // Removed mock array push
+        // Removed mock array push
+      // Removed mock array push
 
       // Save centralized representation to global booking state for /my-borrowings view
       const bookingId = `REQ-${Date.now()}`;
@@ -112,7 +112,7 @@ function Booking() {
         rentalAmount: totalItemPrice,
         depositAmount: item.securityDeposit || 0,
         totalAmount: finalTotal,
-        status: BOOKING_STATUS.upcoming,
+        status: BOOKING_STATUS.pending,
       };
 
       setBookings((prev) => [...prev, newBooking]);
@@ -184,3 +184,4 @@ function Booking() {
 }
 
 export default Booking;
+
