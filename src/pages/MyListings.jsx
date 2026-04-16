@@ -8,8 +8,6 @@ import { useListings } from "../context/ListingContext.jsx";
 
 const tabs = ["Active Listings", "Pending Approvals", "Rental History"];
 
-// Removed statically coded mock history
-
 const formatShortDate = (value) => {
   if (!value) return "";
   const date = new Date(value);
@@ -38,50 +36,58 @@ function MyListings() {
   const { bookings, approveBooking, rejectBooking, markReturned, cancelBooking } = useBookings();
 
   const formattedListings = useMemo(() => {
-    return listings.map(item => {
+    return listings.map((item) => {
       const itemBookings = uniqueById(
         bookings.filter((booking) => String(booking.itemId) === String(item.id))
       );
-      const ongoing = itemBookings.find(b => b.status === BOOKING_STATUS.ongoing);
-      const upcoming = itemBookings.filter(b => b.status === BOOKING_STATUS.upcoming);
-      
-      upcoming.sort((a,b) => new Date(a.start) - new Date(b.start));
+      const ongoing = itemBookings.find((booking) => booking.status === BOOKING_STATUS.ongoing);
+      const upcoming = itemBookings.filter((booking) => booking.status === BOOKING_STATUS.upcoming);
 
-      const nextReservation = upcoming.length > 0 ? {
-        dates: formatRange(upcoming[0].start, upcoming[0].end),
-        renter: upcoming[0].requester || "Student"
-      } : null;
+      upcoming.sort((a, b) => new Date(a.start) - new Date(b.start));
 
-      let status = ongoing ? "Rented" : "Available";
+      const nextReservation =
+        upcoming.length > 0
+          ? {
+              dates: formatRange(upcoming[0].start, upcoming[0].end),
+              renter: upcoming[0].requester || "Student",
+            }
+          : null;
+
+      const status = ongoing ? "Rented" : "Available";
 
       return {
         id: item.id,
         name: item.title,
-        price: `₹${item.pricePerDay}`,
+        price: `Rs ${item.pricePerDay}`,
         status,
         isHidden: item.isHidden,
-        image: item.images?.[0] || 'teal',
-        currentRental: ongoing ? {
-          dates: formatRange(ongoing.start, ongoing.end),
-          renter: ongoing.requester || "Student"
-        } : null,
+        image: item.images?.[0] || "teal",
+        currentRental: ongoing
+          ? {
+              dates: formatRange(ongoing.start, ongoing.end),
+              renter: ongoing.requester || "Student",
+            }
+          : null,
         nextReservation,
-        upcoming: upcoming.map(b => ({
-          id: b.id,
-          dates: formatRange(b.start, b.end),
-          renter: b.requester || "Student"
+        upcoming: upcoming.map((booking) => ({
+          id: booking.id,
+          dates: formatRange(booking.start, booking.end),
+          renter: booking.requester || "Student",
         })),
-        rawItem: item
+        rawItem: item,
       };
     });
   }, [listings, bookings]);
 
   const approvals = useMemo(() => {
-    const listingIds = new Set(listings.map(l => String(l.id)));
+    const listingIds = new Set(listings.map((listing) => String(listing.id)));
     return uniqueById(bookings)
-      .filter((booking) => booking.status === BOOKING_STATUS.pending && listingIds.has(String(booking.itemId)))
+      .filter(
+        (booking) =>
+          booking.status === BOOKING_STATUS.pending && listingIds.has(String(booking.itemId))
+      )
       .map((booking) => {
-        const item = listings.find((l) => String(l.id) === String(booking.itemId));
+        const item = listings.find((listing) => String(listing.id) === String(booking.itemId));
         return {
           id: booking.id,
           title: item?.title || booking.title,
@@ -92,19 +98,37 @@ function MyListings() {
   }, [bookings, listings]);
 
   const history = useMemo(() => {
-    const listingIds = new Set(listings.map(l => String(l.id)));
+    const listingIds = new Set(listings.map((listing) => String(listing.id)));
     return uniqueById(bookings)
-      .filter((booking) => booking.status === BOOKING_STATUS.completed && listingIds.has(String(booking.itemId)))
+      .filter(
+        (booking) =>
+          [BOOKING_STATUS.completed, BOOKING_STATUS.cancelled, BOOKING_STATUS.rejected].includes(
+            booking.status
+          ) && listingIds.has(String(booking.itemId))
+      )
       .map((booking) => {
-        const item = listings.find((l) => String(l.id) === String(booking.itemId));
+        const item = listings.find((listing) => String(listing.id) === String(booking.itemId));
+        const statusLabel =
+          booking.status === BOOKING_STATUS.cancelled
+            ? "Cancelled"
+            : booking.status === BOOKING_STATUS.rejected
+              ? "Rejected"
+              : "Completed";
+        const timelineAt =
+          booking.cancelledAt || booking.returnedAt || booking.end || booking.submittedAt || "";
+
         return {
           id: booking.id,
           item: item?.title || booking.title || "Unspecified Item",
           renter: booking.requester || "CampusRent User",
           dates: formatRange(booking.start, booking.end),
-          total: `₹${booking.totalAmount || 0}`,
+          total: `Rs ${booking.totalAmount || 0}`,
+          statusLabel,
+          cancelledBy: booking.cancelledBy || null,
+          timelineAt,
         };
-      });
+      })
+      .sort((a, b) => new Date(b.timelineAt) - new Date(a.timelineAt));
   }, [bookings, listings]);
 
   const handleEditListing = (item) => {
@@ -129,7 +153,8 @@ function MyListings() {
 
   const handleMarkReturned = (item) => {
     const activeBooking = bookings.find(
-      (booking) => String(booking.itemId) === String(item.id) && booking.status === BOOKING_STATUS.ongoing
+      (booking) =>
+        String(booking.itemId) === String(item.id) && booking.status === BOOKING_STATUS.ongoing
     );
     if (activeBooking) {
       markReturned(activeBooking.id);
@@ -137,7 +162,7 @@ function MyListings() {
   };
 
   const handleCancelUpcoming = (bookingId) => {
-    cancelBooking(bookingId);
+    cancelBooking(bookingId, "lender");
   };
 
   return (
@@ -153,9 +178,9 @@ function MyListings() {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "16px" }}>
         {[
-          { label: "Total Revenue", value: "₹48,200" },
+          { label: "Total Revenue", value: "Rs 48,200" },
           { label: "Active Rentals", value: "3" },
-          { label: "Lender Rating", value: "4.9 ★" },
+          { label: "Lender Rating", value: "4.9" },
         ].map((stat) => (
           <div
             key={stat.label}

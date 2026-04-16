@@ -17,13 +17,13 @@ const dedupeBookings = (items) => {
   return Array.from(byId.values());
 };
 
-const updateBookingStatus = (items, id, status) => {
+const updateBookingStatus = (items, id, status, extra = {}) => {
   const targetId = String(id);
   let wasUpdated = false;
   const next = normalizeList(items).map((booking) => {
     if (String(booking.id) !== targetId) return booking;
     wasUpdated = true;
-    return { ...booking, status };
+    return { ...booking, status, ...extra };
   });
   return wasUpdated ? next : items;
 };
@@ -137,9 +137,14 @@ export function BookingProvider({ children }) {
     );
   }, []);
 
-  const cancelBooking = useCallback((id) => {
+  const cancelBooking = useCallback((id, cancelledBy = "borrower") => {
     setRawBookings((prev) =>
-      dedupeBookings(updateBookingStatus(prev, id, BOOKING_STATUS.cancelled))
+      dedupeBookings(
+        updateBookingStatus(prev, id, BOOKING_STATUS.cancelled, {
+          cancelledBy,
+          cancelledAt: new Date().toISOString(),
+        })
+      )
     );
   }, []);
 

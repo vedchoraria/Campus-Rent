@@ -7,7 +7,7 @@ import mockData from "../data/mockData.js";
 import { BOOKING_STATUS } from "../constants/bookingStatus.js";
 import { useBookings } from "../context/BookingContext.jsx";
 
-const tabs = ["Pending", "Upcoming", "Ongoing", "Completed"];
+const tabs = ["Pending", "Upcoming", "Ongoing", "History"];
 
 
 const formatShortDate = (value) => {
@@ -64,7 +64,7 @@ function MyBookings() {
     window.alert("Feature coming soon");
   };
 
-  const { pending, upcoming, ongoing, completed } = useMemo(() => {
+  const { pending, upcoming, ongoing, history } = useMemo(() => {
     const itemLookup = mockData.reduce((acc, item) => {
       acc[item.id] = item;
       return acc;
@@ -82,9 +82,21 @@ function MyBookings() {
         const returned = formatFullDate(booking.returnedAt || booking.end);
         const deposit = formatCurrency(booking.depositAmount ?? item?.securityDeposit);
         const total = formatCurrency(booking.totalAmount);
+        const statusLabel =
+          booking.status === BOOKING_STATUS.cancelled
+            ? "Cancelled"
+            : booking.status === BOOKING_STATUS.rejected
+              ? "Rejected"
+              : booking.status === BOOKING_STATUS.completed
+                ? "Completed"
+                : booking.status;
+        const timelineAt = booking.cancelledAt || booking.returnedAt || booking.end || booking.submittedAt || "";
         return {
           id: booking.id,
           status: booking.status,
+          statusLabel,
+          cancelledBy: booking.cancelledBy || null,
+          timelineAt,
           name,
           owner,
           dates,
@@ -102,7 +114,13 @@ function MyBookings() {
       pending: normalized.filter((booking) => booking.status === BOOKING_STATUS.pending),
       upcoming: normalized.filter((booking) => booking.status === BOOKING_STATUS.upcoming),
       ongoing: normalized.filter((booking) => booking.status === BOOKING_STATUS.ongoing),
-      completed: normalized.filter((booking) => booking.status === BOOKING_STATUS.completed),
+      history: normalized
+        .filter((booking) =>
+          [BOOKING_STATUS.completed, BOOKING_STATUS.cancelled, BOOKING_STATUS.rejected].includes(
+            booking.status
+          )
+        )
+        .sort((a, b) => new Date(b.timelineAt) - new Date(a.timelineAt)),
     };
   }, [bookings]);
 
@@ -110,7 +128,7 @@ function MyBookings() {
     { label: "Pending Requests", value: String(pending.length) },
     { label: "Upcoming Pickups", value: String(upcoming.length) },
     { label: "Ongoing Borrowings", value: String(ongoing.length) },
-    { label: "Completed Borrowings", value: String(completed.length) },
+    { label: "History Records", value: String(history.length) },
   ];
 
   return (
@@ -168,7 +186,7 @@ function MyBookings() {
             <PendingRequestCard
               key={request.id}
               request={request}
-              onCancel={() => cancelBooking(request.id)}
+              onCancel={() => cancelBooking(request.id, "borrower")}
               onMessageOwner={handleComingSoon}
             />
           ))}
@@ -195,16 +213,16 @@ function MyBookings() {
             <UpcomingRentalCard
               key={rental.id}
               rental={rental}
-              onCancel={() => cancelBooking(rental.id)}
+              onCancel={() => cancelBooking(rental.id, "borrower")}
               onChat={handleComingSoon}
             />
           ))}
         </div>
       )}
 
-      {activeTab === "Completed" && (
+      {activeTab === "History" && (
         <div style={{ display: "grid", gap: "16px" }}>
-          {completed.map((rental) => (
+          {history.map((rental) => (
             <CompletedRentalCard key={rental.id} rental={rental} onRateOwner={handleComingSoon} />
           ))}
         </div>

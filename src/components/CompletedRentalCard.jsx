@@ -1,6 +1,26 @@
 import React from "react";
 
 function CompletedRentalCard({ rental, onRateOwner }) {
+  const statusLabel = rental.statusLabel || "Completed";
+  const isCompleted = statusLabel.toLowerCase() === "completed";
+  const statusStyle = isCompleted
+    ? {
+        background: "rgba(16, 185, 129, 0.12)",
+        color: "var(--primary, #0d9488)",
+        border: "1px solid rgba(16, 185, 129, 0.25)",
+      }
+    : statusLabel.toLowerCase() === "cancelled"
+      ? {
+          background: "rgba(245, 158, 11, 0.12)",
+          color: "#b45309",
+          border: "1px solid rgba(245, 158, 11, 0.25)",
+        }
+      : {
+          background: "rgba(239, 68, 68, 0.12)",
+          color: "#b91c1c",
+          border: "1px solid rgba(239, 68, 68, 0.25)",
+        };
+
   return (
     <div
       style={{
@@ -32,28 +52,35 @@ function CompletedRentalCard({ rental, onRateOwner }) {
               borderRadius: "999px",
               fontSize: "12px",
               fontWeight: 600,
-              background: "rgba(16, 185, 129, 0.12)",
-              color: "var(--primary, #0d9488)",
-              border: "1px solid rgba(16, 185, 129, 0.25)",
+              ...statusStyle,
             }}
           >
-            Completed
+            {statusLabel}
           </span>
         </div>
 
         <div style={{ display: "grid", gap: "6px", color: "var(--muted, #6b7280)", fontSize: "14px" }}>
-          <div>Returned on {rental.returned}</div>
+          <div>
+            {isCompleted
+              ? `Returned on ${rental.returned}`
+              : statusLabel.toLowerCase() === "cancelled"
+                ? `Cancelled by ${rental.cancelledBy || "borrower"}`
+                : "Request was rejected by lender"}
+          </div>
+          {rental.dates && <div>Booking dates: {rental.dates}</div>}
         </div>
 
-        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-          <button
-            className="btn outline"
-            style={{ padding: "8px 14px", fontSize: "14px" }}
-            onClick={() => onRateOwner?.(rental)}
-          >
-            Rate Owner
-          </button>
-        </div>
+        {isCompleted && (
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+            <button
+              className="btn outline"
+              style={{ padding: "8px 14px", fontSize: "14px" }}
+              onClick={() => onRateOwner?.(rental)}
+            >
+              Rate Owner
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
