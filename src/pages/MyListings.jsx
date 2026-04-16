@@ -22,6 +22,16 @@ const formatRange = (start, end) => {
   return `${formatShortDate(start)} - ${formatShortDate(end)}`;
 };
 
+const uniqueById = (items) => {
+  const seen = new Set();
+  return items.filter((item) => {
+    const id = String(item?.id || "");
+    if (!id || seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
+};
+
 function MyListings() {
   const [activeTab, setActiveTab] = useState(tabs[0]);
   const { listings, toggleHidden, deleteListing } = useListings();
@@ -29,7 +39,9 @@ function MyListings() {
 
   const formattedListings = useMemo(() => {
     return listings.map(item => {
-      const itemBookings = bookings.filter(b => String(b.itemId) === String(item.id));
+      const itemBookings = uniqueById(
+        bookings.filter((booking) => String(booking.itemId) === String(item.id))
+      );
       const ongoing = itemBookings.find(b => b.status === BOOKING_STATUS.ongoing);
       const upcoming = itemBookings.filter(b => b.status === BOOKING_STATUS.upcoming);
       
@@ -66,7 +78,7 @@ function MyListings() {
 
   const approvals = useMemo(() => {
     const listingIds = new Set(listings.map(l => String(l.id)));
-    return bookings
+    return uniqueById(bookings)
       .filter((booking) => booking.status === BOOKING_STATUS.pending && listingIds.has(String(booking.itemId)))
       .map((booking) => {
         const item = listings.find((l) => String(l.id) === String(booking.itemId));
@@ -81,7 +93,7 @@ function MyListings() {
 
   const history = useMemo(() => {
     const listingIds = new Set(listings.map(l => String(l.id)));
-    return bookings
+    return uniqueById(bookings)
       .filter((booking) => booking.status === BOOKING_STATUS.completed && listingIds.has(String(booking.itemId)))
       .map((booking) => {
         const item = listings.find((l) => String(l.id) === String(booking.itemId));

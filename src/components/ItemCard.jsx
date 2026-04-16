@@ -9,11 +9,15 @@ function ItemCard({ item }) {
   };
 
   const title = item.title || item.name;
-  const priceDisplay = item.pricePerDay ? `₹${item.pricePerDay} ` : "";
+  const priceDisplay = item.pricePerDay ? `Rs ${item.pricePerDay} ` : "";
   const numReviews = item.reviewsCount ? `(${item.reviewsCount})` : "(0)";
   const badgeLabel = item.isVerified ? "Verified" : "Featured";
+  const rentedUntilLabel = item.rentedUntil
+    ? new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(new Date(item.rentedUntil))
+    : "";
 
-  const isUnavailable = Boolean(item.isUnavailable);
+  const isManuallyUnavailable =
+    Boolean(item.isHidden) || String(item.availability || "").toLowerCase().includes("not available");
 
   return (
     <article
@@ -29,15 +33,26 @@ function ItemCard({ item }) {
         }
       }}
     >
-      <div className={`marketplace-card-media ${item.images?.[0] || 'purple'}`}>
+      <div className={`marketplace-card-media ${item.images?.[0] || "purple"}`}>
         <span className="marketplace-card-badge">{badgeLabel}</span>
       </div>
-      
+
       <div className="marketplace-card-body">
         <h3 className="marketplace-card-title">{title}</h3>
-        <div className="marketplace-card-location">
-          <span>📍</span> {item.location}
-        </div>
+        <div className="marketplace-card-location">{item.location}</div>
+        {rentedUntilLabel && (
+          <div
+            style={{
+              marginTop: "8px",
+              marginBottom: "8px",
+              fontSize: "12px",
+              fontWeight: 600,
+              color: "var(--muted)",
+            }}
+          >
+            Rented until {rentedUntilLabel}
+          </div>
+        )}
 
         <div className="marketplace-card-price-row">
           <div className="marketplace-card-price">
@@ -45,7 +60,7 @@ function ItemCard({ item }) {
             {item.pricePerDay && <span>/ day</span>}
           </div>
           <div className="marketplace-rating-info">
-            ⭐ {item.rating || "4.8"} <span className="reviews">{numReviews}</span>
+            {item.rating || "4.8"} <span className="reviews">{numReviews}</span>
           </div>
         </div>
 
@@ -53,10 +68,10 @@ function ItemCard({ item }) {
           <button
             type="button"
             className="btn primary"
-            disabled={isUnavailable}
+            disabled={isManuallyUnavailable}
             onClick={(e) => {
               e.stopPropagation();
-              if (isUnavailable) return;
+              if (isManuallyUnavailable) return;
               navigate(`/booking/${item.id}`);
             }}
           >

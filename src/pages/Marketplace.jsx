@@ -49,10 +49,16 @@ function Marketplace() {
   }, []);
 
   const filteredAndSortedListings = useMemo(() => {
-    const blockedStatuses = new Set([BOOKING_STATUS.upcoming, BOOKING_STATUS.ongoing]);
-    const blockedItemIds = new Set(
-      bookings.filter((booking) => blockedStatuses.has(booking.status)).map((booking) => booking.itemId)
-    );
+    const ongoingByItemId = bookings
+      .filter((booking) => booking.status === BOOKING_STATUS.ongoing)
+      .reduce((acc, booking) => {
+        const itemId = String(booking.itemId);
+        const current = acc[itemId];
+        if (!current || new Date(booking.end) > new Date(current.end)) {
+          acc[itemId] = booking;
+        }
+        return acc;
+      }, {});
 
     let result = listings.filter(item => !item.isHidden);
 
@@ -90,7 +96,7 @@ function Marketplace() {
 
     return result.map((item) => ({
       ...item,
-      isUnavailable: blockedItemIds.has(item.id),
+      rentedUntil: ongoingByItemId[String(item.id)]?.end || null,
     }));
   }, [debouncedSearch, activeCategory, activeLocation, sortOption, bookings, listings]);
 

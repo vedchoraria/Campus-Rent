@@ -5,19 +5,50 @@ import { userBookings as seedBookings } from "../data/mockData.js";
 const BookingContext = createContext(null);
 const STORAGE_KEY = "campusRent_bookings";
 
-const updateById = (items, id, updater) =>
-  items.map((item) => (item.id === id ? updater(item) : item));
+const normalizeList = (items) => (Array.isArray(items) ? items : []);
+
+const dedupeBookings = (items) => {
+  const byId = new Map();
+  normalizeList(items).forEach((booking) => {
+    const key = String(booking?.id || "");
+    if (!key) return;
+    byId.set(key, booking);
+  });
+  return Array.from(byId.values());
+};
+
+const updateBookingStatus = (items, id, status) => {
+  const targetId = String(id);
+  let wasUpdated = false;
+  const next = normalizeList(items).map((booking) => {
+    if (String(booking.id) !== targetId) return booking;
+    wasUpdated = true;
+    return { ...booking, status };
+  });
+  return wasUpdated ? next : items;
+};
+
+const hasDateOverlap = (startA, endA, startB, endB) => {
+  const aStart = new Date(startA);
+  const aEnd = new Date(endA);
+  const bStart = new Date(startB);
+  const bEnd = new Date(endB);
+  if ([aStart, aEnd, bStart, bEnd].some((date) => Number.isNaN(date.getTime()))) {
+    return false;
+  }
+  return aStart <= bEnd && bStart <= aEnd;
+};
 
 export function BookingProvider({ children }) {
-  const [bookings, setBookings] = useState(() => {
+  const [bookings, setRawBookings] = useState(() => {
     if (typeof window === "undefined") return seedBookings;
     try {
       const saved = window.localStorage.getItem(STORAGE_KEY);
-      if (!saved) return seedBookings;
+      if (!saved) return dedupeBookings(seedBookings);
       const parsed = JSON.parse(saved);
-      return Array.isArray(parsed) ? parsed : seedBookings;
+      return dedupeBookings(Array.isArray(parsed) ? parsed : seedBookings);
     } catch (err) {
-      return seedBookings;
+      return dedupeBookings(seedBookings);
     }
   });
 
@@ -29,40 +60,106 @@ export function BookingProvider({ children }) {
     }
   }, [bookings]);
 
+  const setBookings = useCallback((nextOrUpdater) => {
+    setRawBookings((prev) => {
+      const next =
+        typeof nextOrUpdater === "function" ? nextOrUpdater(prev) : nextOrUpdater;
+      return dedupeBookings(next);
+    });
+  }, []);
+
+  const createBooking = useCallback((incomingBooking) => {
+    const normalizedBooking = {
+      ...incomingBooking,
+      id: String(incomingBooking.id),
+      requestKey: incomingBooking.requestKey || null,
+    };
+
+    setRawBookings((prev) => {
+      const deduped = dedupeBookings(prev);
+      const duplicateById = deduped.some(
+        (booking) => String(booking.id) === normalizedBooking.id
+      );
+
+      const duplicateByRequestKey =
+        normalizedBooking.requestKey &&
+        deduped.some(
+          (booking) =>
+            booking.requestKey &&
+            String(booking.requestKey) === String(normalizedBooking.requestKey)
+        );
+
+      if (duplicateById || duplicateByRequestKey) {
+        return deduped;
+      }
+
+      return [...deduped, normalizedBooking];
+    });
+  }, []);
+
   const approveBooking = useCallback((id) => {
-    setBookings((prev) =>
-      updateById(prev, id, (booking) => ({ ...booking, status: BOOKING_STATUS.upcoming }))
-    );
+    setRawBookings((prev) => {
+      const targetId = String(id);
+      const targetBooking = prev.find((booking) => String(booking.id) === targetId);
+      if (!targetBooking) return prev;
+
+      const hasConflict = prev.some((booking) => {
+        if (String(booking.id) === targetId) return false;
+        if (String(booking.itemId) !== String(targetBooking.itemId)) return false;
+        if (
+          booking.status !== BOOKING_STATUS.upcoming &&
+          booking.status !== BOOKING_STATUS.ongoing
+        ) {
+          return false;
+        }
+        return hasDateOverlap(
+          targetBooking.start,
+          targetBooking.end,
+          booking.start,
+          booking.end
+        );
+      });
+
+      if (hasConflict) {
+        if (typeof window !== "undefined") {
+          window.alert("Cannot approve: dates overlap with existing confirmed booking");
+        }
+        return prev;
+      }
+
+      return dedupeBookings(updateBookingStatus(prev, id, BOOKING_STATUS.upcoming));
+    });
   }, []);
 
   const rejectBooking = useCallback((id) => {
-    setBookings((prev) =>
-      updateById(prev, id, (booking) => ({ ...booking, status: BOOKING_STATUS.rejected }))
+    setRawBookings((prev) =>
+      dedupeBookings(updateBookingStatus(prev, id, BOOKING_STATUS.rejected))
     );
   }, []);
 
   const cancelBooking = useCallback((id) => {
-    setBookings((prev) =>
-      updateById(prev, id, (booking) => ({ ...booking, status: BOOKING_STATUS.cancelled }))
+    setRawBookings((prev) =>
+      dedupeBookings(updateBookingStatus(prev, id, BOOKING_STATUS.cancelled))
     );
   }, []);
 
   const markReturned = useCallback((id) => {
-    setBookings((prev) =>
-      updateById(prev, id, (booking) => ({ ...booking, status: BOOKING_STATUS.completed }))
+    setRawBookings((prev) =>
+      dedupeBookings(updateBookingStatus(prev, id, BOOKING_STATUS.completed))
     );
   }, []);
 
   const value = useMemo(
     () => ({
       bookings,
+      createBooking,
       approveBooking,
       rejectBooking,
       cancelBooking,
       markReturned,
       setBookings,
     }),
-    [bookings, approveBooking, rejectBooking, cancelBooking, markReturned]
+    [bookings, createBooking, approveBooking, rejectBooking, cancelBooking, markReturned, setBookings]
   );
 
   return <BookingContext.Provider value={value}>{children}</BookingContext.Provider>;

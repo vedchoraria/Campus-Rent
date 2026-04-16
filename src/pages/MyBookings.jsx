@@ -46,6 +46,16 @@ const formatCurrency = (value) => {
   return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value);
 };
 
+const uniqueById = (items) => {
+  const seen = new Set();
+  return items.filter((item) => {
+    const id = String(item?.id || "");
+    if (!id || seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
+};
+
 function MyBookings() {
   const [activeTab, setActiveTab] = useState(tabs[0]);
 
@@ -60,7 +70,7 @@ function MyBookings() {
       return acc;
     }, {});
 
-    const normalized = bookings
+    const normalized = uniqueById(bookings)
       .map((booking) => {
         const item = itemLookup[booking.itemId];
         const name = booking.title || item?.title || "Item";
