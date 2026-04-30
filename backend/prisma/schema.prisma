@@ -1,13 +1,130 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum BookingStatus {
+  pending
+  upcoming
+  ongoing
+  completed
+  cancelled
+  rejected
+}
+
+enum ListingStatus {
+  active
+  hidden
+  paused
+  deleted
+}
+
+model User {
+  id                   String   @id @default(uuid())
+  fullName             String
+  collegeEmail         String   @unique
+  department           String?
+  yearOfStudy          String?
+  bio                  String?
+  profileImage         String?
+  preferredPickupZones String[]
+  lenderRating         Float    @default(0)
+  ratingsCount         Int      @default(0)
+
+  // Relations: Users can be both lenders and borrowers natively
+  listings          Listing[]
+  borrowedBookings  Booking[] @relation("BorrowerBookings")
+  cancelledBookings Booking[] @relation("CancelledBookings")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Listing {
+  id                  String        @id @default(uuid())
+  title               String
+  description         String
+  category            String
+  condition           String
+  dailyRentalRate     Float
+  securityDeposit     Float
+  retailPrice         Float
+  minimumRentalDays   Int           @default(1)
+  preferredPickupZone String
+  customPickupNote    String?
+  status              ListingStatus @default(active)
+
+  // Relations
+  ownerId  String
+  owner    User           @relation(fields: [ownerId], references: [id])
+  images   ListingImage[]
+  bookings Booking[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ownerId])
+  @@index([category])
+  @@index([status])
+}
+
+model ListingImage {
+  id           String @id @default(uuid())
+  imageUrl     String
+  displayOrder Int    @default(0)
+
+  // Relations
+  listingId String
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([listingId, displayOrder])
+  @@index([listingId])
+}
+
+model Booking {
+  id        String        @id @default(uuid())
+  startDate DateTime
+  endDate   DateTime
+  status    BookingStatus @default(pending)
+
+  // Financial Snapshots
+  totalPriceSnapshot      Float
+  securityDepositSnapshot Float
+
+  // Pickup Details
+  pickupZone String
+  pickupTime DateTime?
+
+  // Lifecycle timestamps
+  approvedAt         DateTime?
+  returnedAt         DateTime?
+  cancelledAt        DateTime?
+  cancellationReason String?
+
+  // Relations
+  listingId String
+  listing   Listing @relation(fields: [listingId], references: [id])
+
+  borrowerId String
+  borrower   User   @relation("BorrowerBookings", fields: [borrowerId], references: [id])
+
+  ownerId String // Owner snapshot
+
+  cancelledById String?
+  cancelledBy   User?   @relation("CancelledBookings", fields: [cancelledById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([listingId])
+  @@index([borrowerId])
+  @@index([ownerId])
+  @@index([status])
 }
