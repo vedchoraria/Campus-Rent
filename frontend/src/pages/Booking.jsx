@@ -7,6 +7,7 @@ import mockData from "../data/mockData.js";
 import { BOOKING_STATUS } from "../constants/bookingStatus.js";
 import { useBookings } from "../context/BookingContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
+import { api } from "../services/api.js";
 
 function Booking() {
   const { id } = useParams();
@@ -111,7 +112,7 @@ function Booking() {
   const isValid = totalDays > 0 && !error;
   const canSubmit = isValid && !isSubmitting;
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!isValid || submitGuardRef.current) return;
 
     submitGuardRef.current = true;
@@ -119,30 +120,50 @@ function Booking() {
 
     const requesterName = user?.name || "CampusRent User";
     const requesterEmail = user?.email || "anonymous@campusrent.local";
-    const bookingId =
-      typeof crypto !== "undefined" && crypto.randomUUID
-        ? `REQ-${crypto.randomUUID()}`
-        : `REQ-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const borrowerId = "07470ac1-1ca0-42ee-a694-ea9dca3d064c"; // Seeded Alex Rivera
 
-    const newBooking = {
-      id: bookingId,
-      requestKey: `${requesterEmail.toLowerCase()}|${String(item.id)}|${startDate}|${endDate}`,
-      itemId: item.id,
-      title: item.title,
-      image: item.images?.[0] || item.imageClass,
-      start: startDate,
-      end: endDate,
-      requester: requesterName,
-      requesterEmail,
-      submittedAt: new Date().toISOString(),
-      rentalAmount: totalItemPrice,
-      depositAmount: item.securityDeposit || 0,
-      totalAmount: finalTotal,
-      status: BOOKING_STATUS.pending,
-    };
+    try {
+      const response = await api.createBooking({
+        listingId: item.id,
+        borrowerId: borrowerId,
+        startDate: startDate,
+        endDate: endDate,
+        pickupZone: item.location || "Default Zone",
+        pickupTime: "10:00 AM"
+      });
 
-    createBooking(newBooking);
-    navigate("/chat", { state: { bookingRef: bookingId } });
+      if (response.success) {
+        const newBooking = {
+          id: response.data.id,
+          requestKey: `${requesterEmail.toLowerCase()}|${String(item.id)}|${startDate}|${endDate}`,
+          itemId: item.id,
+          title: item.title,
+          image: item.images?.[0] || item.imageClass,
+          start: startDate,
+          end: endDate,
+          requester: requesterName,
+          requesterEmail,
+          submittedAt: new Date().toISOString(),
+          rentalAmount: totalItemPrice,
+          depositAmount: item.securityDeposit || 0,
+          totalAmount: finalTotal,
+          status: BOOKING_STATUS.pending,
+        };
+
+        createBooking(newBooking);
+        navigate("/chat", { state: { bookingRef: response.data.id } });
+      }
+    } catch (err) {
+      console.error("Booking failed:", err);
+      submitGuardRef.current = false;
+      setIsSubmitting(false);
+
+      if (err.message && err.message.toLowerCase().includes("overlap")) {
+        setError("Your requested dates overlap with a confirmed booking. Please select different dates.");
+      } else {
+        setError(err.message || "An unexpected error occurred while booking. Please try again.");
+      }
+    }
   };
 
   const handleCancel = () => {

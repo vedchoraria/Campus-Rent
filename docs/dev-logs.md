@@ -66,11 +66,6 @@
 - Prepared backend migration surface through stable context contracts and API service abstraction.
 - Completed Supabase preparation groundwork without introducing backend-dependent runtime paths.
 
-## Current Phase – Backend Migration Planning
-- Frontend domain models, lifecycle transitions, and audit metadata are stabilized for migration.
-- Booking/listing state contracts are ready to be mapped to persistent backend tables and policies.
-- Migration planning is active with focus on replacing local persistence with backend-backed workflows.
-
 ### Phase 5.0 - Backend Architecture & Database Initialization
 - Restructured project into decoupled rontend/ and ackend/ directories.
 - Initialized Node.js/Express backend on port 5000 with CORS and JSON middleware.

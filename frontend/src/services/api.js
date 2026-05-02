@@ -23,7 +23,7 @@ export const api = {
   getListings: async (signal) => {
     return api.get("/listings", signal);
   },
-  
+
   getListingById: async (id, signal) => {
     return api.get(`/listings/${id}`, signal);
   }
