@@ -70,3 +70,17 @@
 - Frontend domain models, lifecycle transitions, and audit metadata are stabilized for migration.
 - Booking/listing state contracts are ready to be mapped to persistent backend tables and policies.
 - Migration planning is active with focus on replacing local persistence with backend-backed workflows.
+
+### Phase 5.0 - Backend Architecture & Database Initialization
+- Restructured project into decoupled rontend/ and ackend/ directories.
+- Initialized Node.js/Express backend on port 5000 with CORS and JSON middleware.
+- Set up Prisma ORM and connected to Neon serverless PostgreSQL database.
+- Finalized strict relational database schema including User, Listing, ListingImage, and Booking models.
+- Migrated from generic string states to strict database Enums (BookingStatus, ListingStatus).
+- Implemented historical data integrity by adding 	otalPriceSnapshot, securityDepositSnapshot, and ownerId directly to the Booking table.
+- Added highly practical, production-ready B-Tree indexes on foreign keys (ownerId, listingId) to prevent sequential scans on dashboards and marketplace filters.
+- Created idempotent seed.js script that successfully populated the Neon database with the frontend's mock profile and listing data.
+
+## Current Phase - API Route Implementation
+- Database is fully provisioned and seeded.
+- Next step is to replace frontend static imports with Express /api/* route connections.
