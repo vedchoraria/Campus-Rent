@@ -17,12 +17,14 @@ export function ListingProvider({ children }) {
     const fetchListings = async () => {
       try {
         setIsLoading(true);
-        // Call our dedicated API helper, passing the signal
-        const response = await api.getListings(abortController.signal);
+        // Fetch both global active listings and the user's personal listings (including hidden)
+        const [globalRes, myRes] = await Promise.all([
+          api.getListings(abortController.signal),
+          api.getMyListings(abortController.signal)
+        ]);
         
-        // Map backend schema (dailyRentalRate, owner nested object) 
-        // back to frontend schema (pricePerDay, rating) so the UI doesn't break
-        const mappedData = response.data.map(item => ({
+        // Helper to map Prisma response to Legacy frontend schema
+        const mapListing = (item) => ({
           id: item.id,
           title: item.title,
           description: item.description,
@@ -31,7 +33,6 @@ export function ListingProvider({ children }) {
           securityDeposit: item.securityDeposit,
           mrp: item.retailPrice,
           location: item.preferredPickupZone,
-          // Extract just the image URLs like the frontend expects
           images: item.images && item.images.length > 0 
             ? item.images.map(img => img.imageUrl) 
             : ["purple"], 
@@ -41,15 +42,21 @@ export function ListingProvider({ children }) {
           availability: item.status === 'active' ? 'Available Now' : 'Not Available',
           dateAdded: item.createdAt,
           isHidden: item.status !== 'active'
-        }));
+        });
+
+        const mappedGlobal = (globalRes.data || []).map(mapListing);
+        const mappedMine = (myRes.data || []).map(mapListing);
+
+        // Deduplicate by ID so we don't have overlapping listings
+        const combined = [...mappedGlobal, ...mappedMine];
+        const deduplicated = Array.from(new Map(combined.map(item => [item.id, item])).values());
         
-        setListings(mappedData);
+        setListings(deduplicated);
         setError(null);
       } catch (err) {
         if (err.name === 'AbortError') return; // Ignore aborts
         
         console.error("Failed to fetch live listings, falling back to mockData:", err);
-        // Preserve mockData temporarily for debugging/rollback safety
         setListings(mockData.map(item => ({ ...item, isHidden: false })));
         setError(err.message || "Failed to load live data. Displaying cached data.");
       } finally {
@@ -62,7 +69,6 @@ export function ListingProvider({ children }) {
     fetchListings();
 
     return () => {
-      // Cleanup function to abort fetch if component unmounts
       abortController.abort();
     };
   }, []);

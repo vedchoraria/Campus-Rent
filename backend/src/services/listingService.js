@@ -93,3 +93,28 @@ export const getListingById = async (id) => {
 
   return listing;
 };
+
+/**
+ * Fetch all listings owned by a specific user.
+ * This explicitly includes hidden listings.
+ */
+export const getMyListings = async (userId) => {
+  const listings = await prisma.listing.findMany({
+    where: { 
+      ownerId: userId,
+      status: { not: 'deleted' }
+    },
+    include: {
+      images: {
+        orderBy: {
+          displayOrder: 'asc'
+        }
+      }
+    },
+    orderBy: {
+      createdAt: 'desc'
+    }
+  });
+
+  return listings;
+};

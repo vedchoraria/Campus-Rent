@@ -26,5 +26,13 @@ export const api = {
 
   getListingById: async (id, signal) => {
     return api.get(`/listings/${id}`, signal);
+  },
+
+  getMyListings: async (signal) => {
+    return api.get("/listings/my-listings", signal);
+  },
+
+  getMyBookings: async (signal) => {
+    return api.get("/bookings/my-bookings", signal);
   }
 };

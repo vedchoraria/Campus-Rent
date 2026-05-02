@@ -58,3 +58,23 @@ export const getListing = async (req, res) => {
     });
   }
 };
+
+export const getMyListings = async (req, res) => {
+  try {
+    // Temporary hardcoded seeded user (Alex Rivera) until Auth is implemented
+    const userId = "07470ac1-1ca0-42ee-a694-ea9dca3d064c"; 
+    
+    const listings = await listingService.getMyListings(userId);
+
+    res.status(200).json({
+      success: true,
+      data: listings
+    });
+  } catch (error) {
+    console.error('Error fetching my listings:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch your listings. Please try again later.'
+    });
+  }
+};

@@ -7,6 +7,10 @@ const router = express.Router();
 // Since this router will be mounted at '/api/listings', this resolves to GET /api/listings
 router.get('/', listingController.getListings);
 
+// GET /api/listings/my-listings
+// Must be registered before /:id to prevent "my-listings" from being treated as an ID
+router.get('/my-listings', listingController.getMyListings);
+
 // Resolves to GET /api/listings/:id
 router.get('/:id', listingController.getListing);
 
