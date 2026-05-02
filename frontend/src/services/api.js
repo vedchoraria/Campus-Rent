@@ -22,5 +22,9 @@ export const api = {
   // Dedicated API helpers
   getListings: async (signal) => {
     return api.get("/listings", signal);
+  },
+  
+  getListingById: async (id, signal) => {
+    return api.get(`/listings/${id}`, signal);
   }
 };

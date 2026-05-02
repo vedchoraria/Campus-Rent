@@ -44,3 +44,52 @@ export const getActiveListings = async () => {
 
   return listings;
 };
+
+/**
+ * Retrieves a single listing by ID.
+ * Excludes 'deleted' items.
+ * Includes owner metadata, ordered images, and active bookings.
+ */
+export const getListingById = async (id) => {
+  const listing = await prisma.listing.findFirst({
+    where: {
+      id: id,
+      status: { not: 'deleted' }
+    },
+    include: {
+      images: {
+        orderBy: {
+          displayOrder: 'asc',
+        },
+        select: {
+          imageUrl: true,
+          displayOrder: true,
+        },
+      },
+      owner: {
+        select: {
+          id: true,
+          fullName: true,
+          profileImage: true,
+          department: true,
+          lenderRating: true,
+        },
+      },
+      bookings: {
+        where: {
+          status: {
+            in: ['upcoming', 'ongoing']
+          }
+        },
+        select: {
+          id: true,
+          startDate: true,
+          endDate: true,
+          status: true,
+        }
+      }
+    },
+  });
+
+  return listing;
+};

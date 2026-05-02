@@ -7,4 +7,7 @@ const router = express.Router();
 // Since this router will be mounted at '/api/listings', this resolves to GET /api/listings
 router.get('/', listingController.getListings);
 
+// Resolves to GET /api/listings/:id
+router.get('/:id', listingController.getListing);
+
 export default router;

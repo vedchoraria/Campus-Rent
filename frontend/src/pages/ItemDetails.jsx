@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import mockData from "../data/mockData.js";
+import { api } from "../services/api.js";
 import ItemGallery from "../components/ItemGallery.jsx";
 import ItemInfo from "../components/ItemInfo.jsx";
 import BookingForm from "../components/BookingForm.jsx";
@@ -12,18 +13,93 @@ import { BOOKING_STATUS } from "../constants/bookingStatus.js";
 function ItemDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const item = mockData.find((entry) => String(entry.id) === String(id));
   const { bookings } = useBookings();
+
+  const [item, setItem] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(null);
 
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    let isMounted = true;
+    const abortController = new AbortController();
+
+    const fetchListing = async () => {
+      try {
+        setIsLoading(true);
+        const response = await api.getListingById(id, abortController.signal);
+        
+        if (isMounted && response.success) {
+          const apiItem = response.data;
+          const mappedItem = {
+            id: apiItem.id,
+            title: apiItem.title,
+            description: apiItem.description,
+            category: apiItem.category,
+            condition: apiItem.condition,
+            pricePerDay: apiItem.dailyRentalRate,
+            securityDeposit: apiItem.securityDeposit,
+            mrp: apiItem.retailPrice,
+            minimumRentalDays: apiItem.minimumRentalDays,
+            location: apiItem.preferredPickupZone,
+            images: apiItem.images && apiItem.images.length > 0 
+              ? apiItem.images.map(img => img.imageUrl) 
+              : ["purple"], 
+            rating: apiItem.owner?.lenderRating || 4.8,
+            reviewsCount: apiItem.owner?.ratingsCount || 0,
+            ownerName: apiItem.owner?.fullName,
+            ownerDept: apiItem.owner?.department,
+            ownerImg: apiItem.owner?.profileImage,
+            isVerified: true, 
+            availability: apiItem.status === 'active' ? 'Available Now' : 'Not Available',
+            dateAdded: apiItem.createdAt,
+            isHidden: apiItem.status !== 'active'
+          };
+          setItem(mappedItem);
+          setFetchError(null);
+        }
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+        if (isMounted) {
+          console.error("Failed to fetch live listing, falling back to mockData:", err);
+          const mockItem = mockData.find((entry) => String(entry.id) === String(id));
+          if (mockItem) {
+            setItem(mockItem);
+          } else {
+            setFetchError(err.message || "Failed to load listing");
+          }
+        }
+      } finally {
+        if (isMounted && !abortController.signal.aborted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    fetchListing();
+
+    return () => {
+      isMounted = false;
+      abortController.abort();
+    };
+  }, [id]);
+
+  if (isLoading) {
+    return (
+      <section className="page" style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ color: 'var(--muted)', fontSize: '18px' }}>Loading listing details...</p>
+      </section>
+    );
+  }
+
   if (!item) {
     return (
       <section className="page" style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
         <h2 style={{ fontSize: '32px', marginBottom: '16px' }}>Item not found</h2>
-        <p style={{ color: 'var(--muted)', marginBottom: '24px' }}>The gear you are looking for doesn't exist or was removed.</p>
+        <p style={{ color: 'var(--muted)', marginBottom: '24px' }}>{fetchError || "The gear you are looking for doesn't exist or was removed."}</p>
         <button onClick={() => navigate('/marketplace')} className="btn primary">
           Back to Marketplace
         </button>
@@ -108,7 +184,7 @@ function ItemDetails() {
         
         {/* Left Section: Gallery & Info */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-          <ItemGallery images={item.images} fallbackClass={item.imageClass} />
+          <ItemGallery images={item.images} fallbackClass={item.imageClass || item.images?.[0]} />
           <ItemInfo item={item} />
         </div>
 
