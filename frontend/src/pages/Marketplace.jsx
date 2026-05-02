@@ -28,8 +28,7 @@ function Marketplace() {
   const [activeLocation, setActiveLocation] = useState("All Locations");
   const [sortOption, setSortOption] = useState("Newest");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const { listings } = useListings();
+  const { listings, isLoading, error } = useListings();
   const { bookings } = useBookings();
 
   // Debounce search input
@@ -40,13 +39,7 @@ function Marketplace() {
     return () => clearTimeout(handler);
   }, [searchQuery]);
 
-  // Simulate initial realistic loading state
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 800);
-    return () => clearTimeout(timer);
-  }, []);
+  // Simulate initial realistic loading state removed
 
   const filteredAndSortedListings = useMemo(() => {
     const ongoingByItemId = bookings
@@ -197,6 +190,11 @@ function Marketplace() {
                 Find high-quality gear you need for your next project or weekend
                 trip, shared by peers.
               </p>
+              {error && (
+                <div style={{ marginTop: '12px', padding: '10px 16px', background: 'rgba(255,0,0,0.1)', color: 'red', borderRadius: '6px', fontSize: '14px', fontWeight: '500' }}>
+                  ⚠️ {error}
+                </div>
+              )}
             </div>
           </div>
 

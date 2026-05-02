@@ -1,8 +1,9 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 export const api = {
-  get: async (endpoint) => {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`);
+  get: async (endpoint, signal) => {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, { signal });
+    if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
     return response.json();
   },
 
@@ -14,6 +15,12 @@ export const api = {
       },
       body: JSON.stringify(data),
     });
+    if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
     return response.json();
+  },
+
+  // Dedicated API helpers
+  getListings: async (signal) => {
+    return api.get("/listings", signal);
   }
 };
