@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import listingRoutes from './routes/listingRoutes.js';
 
 const app = express();
 
@@ -13,6 +14,6 @@ app.get('/health', (req, res) => {
 });
 
 // Future routes will be mounted here
-// app.use('/api/listings', listingRoutes);
+app.use('/api/listings', listingRoutes);
 
 export default app;
