@@ -1,8 +1,8 @@
-# CampusRent Development Log
+﻿# CampusRent Development Log
 
 **Project:** CampusRent  
 **Document Type:** Engineering Development Journal  
-**Last Updated:** 2026-04-16
+**Last Updated:** 2026-05-02
 
 ## Phase 1 - Product Foundation and Core Frontend
 
@@ -67,15 +67,16 @@
 - Completed Supabase preparation groundwork without introducing backend-dependent runtime paths.
 
 ### Phase 5.0 - Backend Architecture & Database Initialization
-- Restructured project into decoupled rontend/ and ackend/ directories.
+- Restructured project into decoupled `frontend/` and `backend/` directories.
 - Initialized Node.js/Express backend on port 5000 with CORS and JSON middleware.
 - Set up Prisma ORM and connected to Neon serverless PostgreSQL database.
 - Finalized strict relational database schema including User, Listing, ListingImage, and Booking models.
 - Migrated from generic string states to strict database Enums (BookingStatus, ListingStatus).
-- Implemented historical data integrity by adding 	otalPriceSnapshot, securityDepositSnapshot, and ownerId directly to the Booking table.
+- Implemented historical data integrity by adding `totalPriceSnapshot`, `securityDepositSnapshot`, and `ownerId` directly to the Booking table.
 - Added highly practical, production-ready B-Tree indexes on foreign keys (ownerId, listingId) to prevent sequential scans on dashboards and marketplace filters.
 - Created idempotent seed.js script that successfully populated the Neon database with the frontend's mock profile and listing data.
 
 ## Current Phase - API Route Implementation
 - Database is fully provisioned and seeded.
-- Next step is to replace frontend static imports with Express /api/* route connections.
+- Next step is to replace frontend static imports with Express `/api/*` route connections.
+
