@@ -6,7 +6,6 @@ export const getMyBookings = async (userId) => {
       select: {
         id: true,
         title: true,
-        imageClass: true,
         securityDeposit: true,
         images: { orderBy: { displayOrder: 'asc' }, take: 1 }
       }
