@@ -78,3 +78,24 @@ export const getMyListings = async (req, res) => {
     });
   }
 };
+
+export const createListing = async (req, res) => {
+  try {
+    // Temporary hardcoded seeded user (Alex Rivera) until Auth is implemented
+    const userId = "07470ac1-1ca0-42ee-a694-ea9dca3d064c";
+    const payload = req.body || {};
+
+    const createdListing = await listingService.createListing(userId, payload);
+
+    res.status(201).json({
+      success: true,
+      data: createdListing
+    });
+  } catch (error) {
+    console.error('Error creating listing:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create listing. Please try again later.'
+    });
+  }
+};

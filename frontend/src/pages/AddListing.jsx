@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import mockData from "../data/mockData.js";
+import { api } from "../services/api.js";
+import { useListings } from "../context/ListingContext.jsx";
 
 const steps = ["Item Info", "Pricing Info", "Visual Showcase"];
 
@@ -18,6 +19,7 @@ const fallbackImages = ["purple", "blue", "teal", "coral"];
 
 function AddListing() {
   const navigate = useNavigate();
+  const { refreshListings } = useListings();
   const [step, setStep] = useState(1);
   const [error, setError] = useState("");
   
@@ -124,32 +126,33 @@ function AddListing() {
     });
   };
 
-  const handlePublish = () => {
+  const handlePublish = async () => {
     if (validateStep(3)) {
       const finalCategory = form.category === "Other" ? form.customCategory : form.category;
       const finalLocation = form.location === "Other" ? form.customLocation : form.location;
 
-      const newItem = {
-        id: `m${Date.now()}`,
-        title: form.title,
-        pricePerDay: Number(form.pricePerDay),
-        securityDeposit: Number(form.securityDeposit),
-        mrp: Number(form.mrp),
-        minDays: Number(form.minDays),
-        rating: 0,
-        reviewsCount: 0,
-        location: finalLocation,
-        category: finalCategory,
-        isVerified: true, 
-        availability: "Available Now",
-        images: form.images,
-        dateAdded: new Date().toISOString(),
-        description: form.description,
-        bookings: []
-      };
+      try {
+        const response = await api.createListing({
+          title: form.title,
+          description: form.description,
+          category: finalCategory,
+          condition: form.condition,
+          dailyRentalRate: Number(form.pricePerDay),
+          securityDeposit: Number(form.securityDeposit),
+          retailPrice: Number(form.mrp),
+          minimumRentalDays: Number(form.minDays),
+          preferredPickupZone: finalLocation,
+          images: form.images.map((imageUrl, index) => ({
+            imageUrl,
+            displayOrder: index
+          }))
+        });
 
-      mockData.unshift(newItem); 
-      navigate(`/item/${newItem.id}`);
+        await refreshListings();
+        navigate(`/item/${response.data.id}`);
+      } catch (err) {
+        setError(err.message || "Failed to publish listing. Please try again.");
+      }
     }
   };
 

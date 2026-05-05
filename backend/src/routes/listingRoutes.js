@@ -11,6 +11,9 @@ router.get('/', listingController.getListings);
 // Must be registered before /:id to prevent "my-listings" from being treated as an ID
 router.get('/my-listings', listingController.getMyListings);
 
+// POST /api/listings
+router.post('/', listingController.createListing);
+
 // Resolves to GET /api/listings/:id
 router.get('/:id', listingController.getListing);
 

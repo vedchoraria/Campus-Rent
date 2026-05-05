@@ -32,6 +32,10 @@ export const api = {
     return api.get("/listings/my-listings", signal);
   },
 
+  createListing: async (payload) => {
+    return api.post("/listings", payload);
+  },
+
   getMyBookings: async (signal) => {
     return api.get("/bookings/my-bookings", signal);
   }

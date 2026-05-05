@@ -118,3 +118,53 @@ export const getMyListings = async (userId) => {
 
   return listings;
 };
+
+/**
+ * Create a listing with related images for a specific owner.
+ */
+export const createListing = async (ownerId, payload) => {
+  const listing = await prisma.listing.create({
+    data: {
+      title: payload.title,
+      description: payload.description,
+      category: payload.category,
+      condition: payload.condition,
+      dailyRentalRate: payload.dailyRentalRate,
+      securityDeposit: payload.securityDeposit,
+      retailPrice: payload.retailPrice,
+      minimumRentalDays: payload.minimumRentalDays,
+      preferredPickupZone: payload.preferredPickupZone,
+      customPickupNote: payload.customPickupNote || null,
+      status: 'active',
+      ownerId,
+      images: {
+        create: (payload.images || []).map((image, index) => ({
+          imageUrl: image.imageUrl,
+          displayOrder: typeof image.displayOrder === 'number' ? image.displayOrder : index
+        }))
+      }
+    },
+    include: {
+      images: {
+        orderBy: {
+          displayOrder: 'asc'
+        },
+        select: {
+          imageUrl: true,
+          displayOrder: true
+        }
+      },
+      owner: {
+        select: {
+          id: true,
+          fullName: true,
+          profileImage: true,
+          department: true,
+          lenderRating: true
+        }
+      }
+    }
+  });
+
+  return listing;
+};
