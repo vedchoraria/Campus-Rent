@@ -6,6 +6,7 @@ import { checkAvailability } from "../utils/bookingUtils.js";
 import mockData from "../data/mockData.js";
 import { BOOKING_STATUS } from "../constants/bookingStatus.js";
 import { useBookings } from "../context/BookingContext.jsx";
+import { useListings } from "../context/ListingContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { api } from "../services/api.js";
 
@@ -14,8 +15,11 @@ function Booking() {
   const navigate = useNavigate();
   const location = useLocation();
   const stateContext = location.state || {};
+  const { listings, isLoading: areListingsLoading } = useListings();
 
-  const item = mockData.find((entry) => String(entry.id) === String(id));
+  const itemFromContext = listings.find((entry) => String(entry.id) === String(id));
+  const itemFromMock = mockData.find((entry) => String(entry.id) === String(id));
+  const item = itemFromContext || itemFromMock;
 
   const [startDate, setStartDate] = useState(stateContext.startDate || "");
   const [endDate, setEndDate] = useState(stateContext.endDate || "");
@@ -31,6 +35,23 @@ function Booking() {
       setStartDate(today);
     }
   }, [startDate]);
+
+  if (areListingsLoading && !item) {
+    return (
+      <section
+        className="page"
+        style={{
+          minHeight: "60vh",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <p style={{ color: "var(--muted)", fontSize: "18px" }}>Loading booking details...</p>
+      </section>
+    );
+  }
 
   if (!item) {
     return (
