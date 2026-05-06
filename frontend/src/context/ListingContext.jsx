@@ -1,9 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import mockData from "../data/mockData.js";
 import { api } from "../services/api.js";
 
 const ListingContext = createContext(null);
-const STORAGE_KEY = "campusRent_listings";
 
 export function ListingProvider({ children }) {
   const [listings, setListings] = useState([]);
@@ -47,9 +45,9 @@ export function ListingProvider({ children }) {
       setError(null);
     } catch (err) {
       if (err.name === 'AbortError') return;
-      console.error("Failed to fetch live listings, falling back to mockData:", err);
-      setListings(mockData.map((item) => ({ ...item, isHidden: false })));
-      setError(err.message || "Failed to load live data. Displaying cached data.");
+      console.error("Failed to fetch live listings:", err);
+      setListings([]);
+      setError(err.message || "Failed to load live listings.");
     } finally {
       if (!signal || !signal.aborted) {
         setIsLoading(false);

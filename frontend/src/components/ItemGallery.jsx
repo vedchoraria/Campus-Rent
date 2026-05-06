@@ -1,16 +1,19 @@
 import React, { useState } from "react";
+import { resolveMediaDisplay } from "../utils/mediaUtils.js";
 
 function ItemGallery({ images = [], fallbackClass = "purple" }) {
   const [activeIndex, setActiveIndex] = useState(0);
 
   const mainImage = images.length > 0 ? images[activeIndex] : fallbackClass;
+  const mainMedia = resolveMediaDisplay(mainImage, fallbackClass || "purple");
 
   return (
     <div className="item-gallery">
       {/* Main Large Image */}
       <div 
-        className={`marketplace-card-media ${mainImage} skeleton-bg`} 
+        className={`${mainMedia.className} skeleton-bg`} 
         style={{ 
+          ...mainMedia.style,
           width: '100%', 
           aspectRatio: '4/3', 
           borderRadius: '16px',
@@ -24,12 +27,15 @@ function ItemGallery({ images = [], fallbackClass = "purple" }) {
       {/* Thumbnails */}
       {images.length > 1 && (
         <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '8px' }}>
-          {images.map((imgClass, idx) => (
+          {images.map((imgClass, idx) => {
+            const thumbMedia = resolveMediaDisplay(imgClass, fallbackClass || "purple");
+            return (
             <div 
               key={idx}
               onClick={() => setActiveIndex(idx)}
-              className={`marketplace-card-media ${imgClass}`}  
+              className={thumbMedia.className}
               style={{ 
+                ...thumbMedia.style,
                 flexShrink: 0,
                 width: '80px', 
                 height: '80px', 
@@ -41,7 +47,7 @@ function ItemGallery({ images = [], fallbackClass = "purple" }) {
                 transform: idx === activeIndex ? 'scale(1.05)' : 'scale(1)'
               }}
             ></div>
-          ))}
+          )})}
         </div>
       )}
     </div>

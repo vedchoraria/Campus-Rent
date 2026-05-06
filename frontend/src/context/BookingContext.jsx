@@ -1,10 +1,8 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { BOOKING_STATUS } from "../constants/bookingStatus.js";
-import { userBookings as seedBookings } from "../data/mockData.js";
 import { api } from "../services/api.js";
 
 const BookingContext = createContext(null);
-const STORAGE_KEY = "campusRent_bookings";
 
 const normalizeList = (items) => (Array.isArray(items) ? items : []);
 
@@ -41,106 +39,54 @@ const hasDateOverlap = (startA, endA, startB, endB) => {
 };
 
 export function BookingProvider({ children }) {
-  const [bookings, setRawBookings] = useState(() => {
-    if (typeof window === "undefined") return seedBookings;
+  const [bookings, setRawBookings] = useState([]);
+
+  const refreshBookings = useCallback(async (signal) => {
     try {
-      const saved = window.localStorage.getItem(STORAGE_KEY);
-      if (!saved) return dedupeBookings(seedBookings);
-      const parsed = JSON.parse(saved);
-      return dedupeBookings(Array.isArray(parsed) ? parsed : seedBookings);
+      const res = await api.getMyBookings(signal);
+      if (res.success && res.data) {
+        const mapBooking = (b) => ({
+          id: String(b.id),
+          itemId: String(b.listingId),
+          title: b.listing?.title || "Item",
+          image: b.listing?.images?.[0]?.imageUrl || "teal",
+          start: b.startDate,
+          end: b.endDate,
+          requester: b.borrower?.fullName || "Student",
+          submittedAt: b.createdAt,
+          rentalAmount: b.totalPriceSnapshot,
+          depositAmount: b.securityDepositSnapshot,
+          totalAmount: (b.totalPriceSnapshot || 0) + (b.securityDepositSnapshot || 0),
+          status: b.status,
+          cancelledBy: b.cancelledBy?.fullName || null,
+          cancelledAt: b.cancelledAt,
+          returnedAt: b.returnedAt
+        });
+
+        const borrowings = (res.data.borrowings || []).map(mapBooking);
+        const lending = (res.data.lending || []).map(mapBooking);
+
+        setRawBookings([...borrowings, ...lending]);
+      }
     } catch (err) {
-      return dedupeBookings(seedBookings);
+      if (err.name !== "AbortError") {
+        console.error("Booking API sync failed.", err);
+      }
     }
-  });
+  }, []);
 
   // Fetch live backend data to synchronize BookingContext
   useEffect(() => {
     const controller = new AbortController();
-
-    const fetchBookings = async () => {
-      try {
-        const res = await api.getMyBookings(controller.signal);
-        if (res.success && res.data) {
-          
-          const mapBooking = (b) => ({
-            id: String(b.id),
-            itemId: String(b.listingId),
-            title: b.listing?.title || "Item",
-            image: b.listing?.images?.[0]?.imageUrl || b.listing?.imageClass || "teal",
-            start: b.startDate,
-            end: b.endDate,
-            requester: b.borrower?.fullName || "Student",
-            submittedAt: b.createdAt,
-            rentalAmount: b.totalPriceSnapshot,
-            depositAmount: b.securityDepositSnapshot,
-            totalAmount: (b.totalPriceSnapshot || 0) + (b.securityDepositSnapshot || 0),
-            status: b.status,
-            cancelledBy: b.cancelledBy?.fullName || null,
-            cancelledAt: b.cancelledAt,
-            returnedAt: b.returnedAt
-          });
-
-          // Combine the separated backend arrays into the local legacy flat array
-          const borrowings = (res.data.borrowings || []).map(mapBooking);
-          const lending = (res.data.lending || []).map(mapBooking);
-          
-          setRawBookings([...borrowings, ...lending]);
-        }
-      } catch (err) {
-        if (err.name !== "AbortError") {
-          console.error("Booking API sync failed. Falling back to localStorage.", err);
-        }
-      }
-    };
-
-    fetchBookings();
-
+    refreshBookings(controller.signal);
     return () => controller.abort();
-  }, []);
-
-  // Sync to localStorage as fallback cache
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(bookings));
-    } catch (err) {
-      // Ignore storage write errors (e.g., private mode, quota exceeded)
-    }
-  }, [bookings]);
+  }, [refreshBookings]);
 
   const setBookings = useCallback((nextOrUpdater) => {
     setRawBookings((prev) => {
       const next =
         typeof nextOrUpdater === "function" ? nextOrUpdater(prev) : nextOrUpdater;
       return dedupeBookings(next);
-    });
-  }, []);
-
-  const createBooking = useCallback((incomingBooking) => {
-    const normalizedBooking = {
-      ...incomingBooking,
-      id: String(incomingBooking.id),
-      requestKey: incomingBooking.requestKey || null,
-    };
-
-    setRawBookings((prev) => {
-      const deduped = dedupeBookings(prev);
-      const duplicateById = deduped.some(
-        (booking) => String(booking.id) === normalizedBooking.id
-      );
-
-      const duplicateByRequestKey =
-        normalizedBooking.requestKey &&
-        deduped.some(
-          (booking) =>
-            booking.requestKey &&
-            String(booking.requestKey) === String(normalizedBooking.requestKey)
-        );
-
-      if (duplicateById || duplicateByRequestKey) {
-        return deduped;
-      }
-
-      return [...deduped, normalizedBooking];
     });
   }, []);
 
@@ -204,14 +150,14 @@ export function BookingProvider({ children }) {
   const value = useMemo(
     () => ({
       bookings,
-      createBooking,
       approveBooking,
       rejectBooking,
       cancelBooking,
       markReturned,
       setBookings,
+      refreshBookings,
     }),
-    [bookings, createBooking, approveBooking, rejectBooking, cancelBooking, markReturned, setBookings]
+    [bookings, approveBooking, rejectBooking, cancelBooking, markReturned, setBookings, refreshBookings]
   );
 
   return <BookingContext.Provider value={value}>{children}</BookingContext.Provider>;

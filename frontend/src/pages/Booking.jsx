@@ -3,12 +3,11 @@ import { useNavigate, useParams, useLocation } from "react-router-dom";
 import BookingForm from "../components/BookingForm.jsx";
 import PriceBreakdown from "../components/PriceBreakdown.jsx";
 import { checkAvailability } from "../utils/bookingUtils.js";
-import mockData from "../data/mockData.js";
 import { BOOKING_STATUS } from "../constants/bookingStatus.js";
 import { useBookings } from "../context/BookingContext.jsx";
 import { useListings } from "../context/ListingContext.jsx";
-import { useAuth } from "../context/AuthContext.jsx";
 import { api } from "../services/api.js";
+import { resolveMediaDisplay } from "../utils/mediaUtils.js";
 
 function Booking() {
   const { id } = useParams();
@@ -17,17 +16,14 @@ function Booking() {
   const stateContext = location.state || {};
   const { listings, isLoading: areListingsLoading } = useListings();
 
-  const itemFromContext = listings.find((entry) => String(entry.id) === String(id));
-  const itemFromMock = mockData.find((entry) => String(entry.id) === String(id));
-  const item = itemFromContext || itemFromMock;
+  const item = listings.find((entry) => String(entry.id) === String(id));
 
   const [startDate, setStartDate] = useState(stateContext.startDate || "");
   const [endDate, setEndDate] = useState(stateContext.endDate || "");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submitGuardRef = useRef(false);
-  const { user } = useAuth();
-  const { bookings, createBooking } = useBookings();
+  const { bookings, refreshBookings } = useBookings();
 
   useEffect(() => {
     if (!startDate) {
@@ -132,6 +128,7 @@ function Booking() {
   const finalTotal = totalItemPrice + serviceFee + (item.securityDeposit || 0);
   const isValid = totalDays > 0 && !error;
   const canSubmit = isValid && !isSubmitting;
+  const media = resolveMediaDisplay(item.images?.[0], "purple");
 
   const handleConfirm = async () => {
     if (!isValid || submitGuardRef.current) return;
@@ -139,8 +136,6 @@ function Booking() {
     submitGuardRef.current = true;
     setIsSubmitting(true);
 
-    const requesterName = user?.name || "CampusRent User";
-    const requesterEmail = user?.email || "anonymous@campusrent.local";
     const borrowerId = "07470ac1-1ca0-42ee-a694-ea9dca3d064c"; // Seeded Alex Rivera
 
     try {
@@ -149,29 +144,11 @@ function Booking() {
         borrowerId: borrowerId,
         startDate: startDate,
         endDate: endDate,
-        pickupZone: item.location || "Default Zone",
-        pickupTime: "10:00 AM"
+        pickupZone: item.location || "Default Zone"
       });
 
       if (response.success) {
-        const newBooking = {
-          id: response.data.id,
-          requestKey: `${requesterEmail.toLowerCase()}|${String(item.id)}|${startDate}|${endDate}`,
-          itemId: item.id,
-          title: item.title,
-          image: item.images?.[0] || item.imageClass,
-          start: startDate,
-          end: endDate,
-          requester: requesterName,
-          requesterEmail,
-          submittedAt: new Date().toISOString(),
-          rentalAmount: totalItemPrice,
-          depositAmount: item.securityDeposit || 0,
-          totalAmount: finalTotal,
-          status: BOOKING_STATUS.pending,
-        };
-
-        createBooking(newBooking);
+        await refreshBookings();
         navigate("/chat", { state: { bookingRef: response.data.id } });
       }
     } catch (err) {
@@ -179,8 +156,8 @@ function Booking() {
       submitGuardRef.current = false;
       setIsSubmitting(false);
 
-      if (err.message && err.message.toLowerCase().includes("overlap")) {
-        setError("Your requested dates overlap with a confirmed booking. Please select different dates.");
+      if (err.status === 409) {
+        setError(err.message || "Requested dates overlap with an existing booking.");
       } else {
         setError(err.message || "An unexpected error occurred while booking. Please try again.");
       }
@@ -238,7 +215,7 @@ function Booking() {
             top: "100px",
           }}
         >
-          <div className={`marketplace-card-media ${item.images?.[0] || item.imageClass || "purple"}`} style={{ aspectRatio: "16/9" }}></div>
+          <div className={media.className} style={{ ...media.style, aspectRatio: "16/9" }}></div>
           <div style={{ padding: "24px" }}>
             <h3 style={{ fontSize: "20px", fontWeight: 700, marginBottom: "8px" }}>{item.title}</h3>
             <p

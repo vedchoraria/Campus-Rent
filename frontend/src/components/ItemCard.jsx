@@ -1,5 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import { resolveMediaDisplay } from "../utils/mediaUtils.js";
 
 function ItemCard({ item }) {
   const navigate = useNavigate();
@@ -18,6 +19,7 @@ function ItemCard({ item }) {
 
   const isManuallyUnavailable =
     Boolean(item.isHidden) || String(item.availability || "").toLowerCase().includes("not available");
+  const media = resolveMediaDisplay(item.images?.[0], "purple");
 
   return (
     <article
@@ -33,7 +35,7 @@ function ItemCard({ item }) {
         }
       }}
     >
-      <div className={`marketplace-card-media ${item.images?.[0] || "purple"}`}>
+      <div className={media.className} style={media.style}>
         <span className="marketplace-card-badge">{badgeLabel}</span>
       </div>
 

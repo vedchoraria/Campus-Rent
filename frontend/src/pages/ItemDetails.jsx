@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
-import mockData from "../data/mockData.js";
 import { api } from "../services/api.js";
 import ItemGallery from "../components/ItemGallery.jsx";
 import ItemInfo from "../components/ItemInfo.jsx";
@@ -64,13 +63,8 @@ function ItemDetails() {
       } catch (err) {
         if (err.name === 'AbortError') return;
         if (isMounted) {
-          console.error("Failed to fetch live listing, falling back to mockData:", err);
-          const mockItem = mockData.find((entry) => String(entry.id) === String(id));
-          if (mockItem) {
-            setItem(mockItem);
-          } else {
-            setFetchError(err.message || "Failed to load listing");
-          }
+          console.error("Failed to fetch live listing:", err);
+          setFetchError(err.message || "Failed to load listing");
         }
       } finally {
         if (isMounted && !abortController.signal.aborted) {

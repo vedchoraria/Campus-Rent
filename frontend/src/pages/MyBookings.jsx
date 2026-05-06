@@ -3,7 +3,6 @@ import BorrowedItemCard from "../components/BorrowedItemCard.jsx";
 import UpcomingRentalCard from "../components/UpcomingRentalCard.jsx";
 import CompletedRentalCard from "../components/CompletedRentalCard.jsx";
 import PendingRequestCard from "../components/PendingRequestCard.jsx";
-import mockData from "../data/mockData.js";
 import { BOOKING_STATUS } from "../constants/bookingStatus.js";
 import { useBookings } from "../context/BookingContext.jsx";
 
@@ -65,22 +64,16 @@ function MyBookings() {
   };
 
   const { pending, upcoming, ongoing, history } = useMemo(() => {
-    const itemLookup = mockData.reduce((acc, item) => {
-      acc[item.id] = item;
-      return acc;
-    }, {});
-
     const normalized = uniqueById(bookings)
       .map((booking) => {
-        const item = itemLookup[booking.itemId];
-        const name = booking.title || item?.title || "Item";
-        const image = booking.image || item?.images?.[0] || item?.imageClass || "teal";
+        const name = booking.title || "Item";
+        const image = booking.image || "teal";
         const owner = booking.owner || "CampusRent Owner";
         const dates = formatRange(booking.start, booking.end);
         const submitted = formatFullDate(booking.submittedAt);
         const pickup = formatPickupDate(booking.pickupAt || booking.start);
         const returned = formatFullDate(booking.returnedAt || booking.end);
-        const deposit = formatCurrency(booking.depositAmount ?? item?.securityDeposit);
+        const deposit = formatCurrency(booking.depositAmount);
         const total = formatCurrency(booking.totalAmount);
         const statusLabel =
           booking.status === BOOKING_STATUS.cancelled

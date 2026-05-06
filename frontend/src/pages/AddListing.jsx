@@ -1,7 +1,8 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../services/api.js";
 import { useListings } from "../context/ListingContext.jsx";
+import { resolveMediaDisplay } from "../utils/mediaUtils.js";
 
 const steps = ["Item Info", "Pricing Info", "Visual Showcase"];
 
@@ -15,13 +16,13 @@ const conditionOptions = [
 const categoryOptions = ["Tech", "Adventure", "Sports", "Books", "General", "Other"];
 const locationOptions = ["Central Garden", "Pie-Chai", "Bihan", "AMUL", "Other"];
 
-const fallbackImages = ["purple", "blue", "teal", "coral"];
-
 function AddListing() {
   const navigate = useNavigate();
   const { refreshListings } = useListings();
   const [step, setStep] = useState(1);
   const [error, setError] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef(null);
   
   const [form, setForm] = useState({
     title: "",
@@ -38,12 +39,6 @@ function AddListing() {
     images: []
   });
 
-  // 8. Debugging Requirement
-  useEffect(() => {
-    console.log("Current Step:", step);
-  }, [step]);
-
-  // 3. Progress Bar Logic dynamically calculated
   const progress = (step / steps.length) * 100;
 
   const updateField = (key, value) => {
@@ -106,16 +101,40 @@ function AddListing() {
     setStep((prev) => Math.max(prev - 1, 1));
   };
 
-  const handleMockUpload = () => {
+  const handleImageSelect = async (event) => {
+    const selectedFiles = Array.from(event.target.files || []);
+    if (selectedFiles.length === 0) return;
+
+    const availableSlots = 5 - form.images.length;
+    const filesToUpload = selectedFiles.slice(0, availableSlots);
+    if (filesToUpload.length === 0) return;
+
     setError("");
-    if (form.images.length >= 5) return;
-    
-    // Simulate an image upload by selecting a random gradient class
-    const color = fallbackImages[Math.floor(Math.random() * fallbackImages.length)];
-    setForm(prev => ({
-      ...prev,
-      images: [...prev.images, color]
-    }));
+    setIsUploading(true);
+
+    try {
+      const uploadedUrls = [];
+      for (const file of filesToUpload) {
+        const uploadRes = await api.uploadListingImage(file);
+        if (uploadRes?.success && uploadRes?.data?.url) {
+          uploadedUrls.push(uploadRes.data.url);
+        }
+      }
+
+      if (uploadedUrls.length > 0) {
+        setForm((prev) => ({
+          ...prev,
+          images: [...prev.images, ...uploadedUrls]
+        }));
+      }
+    } catch (err) {
+      setError(err.message || "Failed to upload image. Please try again.");
+    } finally {
+      setIsUploading(false);
+      if (event.target) {
+        event.target.value = "";
+      }
+    }
   };
 
   const handleRemoveImage = (index) => {
@@ -432,29 +451,40 @@ function AddListing() {
               <div className="listing-upload-icon">+</div>
               <div>
                 <strong>Upload images (max 5)</strong>
-                <p style={{ color: 'var(--muted)' }}>Click below to simulate image processing...</p>
+                <p style={{ color: 'var(--muted)' }}>Select real photos to upload securely.</p>
               </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                style={{ display: "none" }}
+                onChange={handleImageSelect}
+              />
               <button 
                 type="button" 
                 className="btn primary" 
-                onClick={handleMockUpload}
-                disabled={form.images.length >= 5}
+                onClick={() => fileInputRef.current?.click()}
+                disabled={form.images.length >= 5 || isUploading}
               >
-                {form.images.length >= 5 ? "Limit Reached" : "Simulate Image Upload"}
+                {form.images.length >= 5 ? "Limit Reached" : isUploading ? "Uploading..." : "Upload Images"}
               </button>
             </div>
 
             <div className="listing-upload-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '16px', marginTop: '24px' }}>
-              {form.images.map((imgClass, index) => (
-                <div key={index} style={{ position: 'relative' }}>
-                  <div className={`marketplace-card-media ${imgClass}`} style={{ width: '100%', aspectRatio: '1/1', borderRadius: '12px', border: '2px solid var(--border)' }}></div>
-                  <button 
-                    onClick={() => handleRemoveImage(index)}
-                    style={{ position: 'absolute', top: '-8px', right: '-8px', background: '#e11d48', color: '#fff', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
-                    ×
-                  </button>
-                </div>
-              ))}
+              {form.images.map((imgSrc, index) => {
+                const media = resolveMediaDisplay(imgSrc, "purple");
+                return (
+                  <div key={index} style={{ position: 'relative' }}>
+                    <div className={media.className} style={{ ...media.style, width: '100%', aspectRatio: '1/1', borderRadius: '12px', border: '2px solid var(--border)' }}></div>
+                    <button 
+                      onClick={() => handleRemoveImage(index)}
+                      style={{ position: 'absolute', top: '-8px', right: '-8px', background: '#e11d48', color: '#fff', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
+                      x
+                    </button>
+                  </div>
+                );
+              })}
               {form.images.length === 0 && (
                 <div style={{ gridColumn: '1 / -1', padding: '16px', textAlign: 'center', color: 'var(--muted)', fontStyle: 'italic', background: 'var(--bg)', borderRadius: '8px' }}>
                   No photos uploaded yet. Click above to add some!
@@ -479,3 +509,5 @@ function AddListing() {
 }
 
 export default AddListing;
+
+

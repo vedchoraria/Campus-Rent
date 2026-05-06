@@ -1,4 +1,5 @@
 import * as listingService from '../services/listingService.js';
+import * as uploadService from '../services/uploadService.js';
 
 /**
  * Controller to handle the GET /api/listings request.
@@ -96,6 +97,24 @@ export const createListing = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to create listing. Please try again later.'
+    });
+  }
+};
+
+export const uploadListingImage = async (req, res) => {
+  try {
+    const uploaded = await uploadService.uploadImageToCloudinary(req.file);
+
+    res.status(201).json({
+      success: true,
+      data: uploaded
+    });
+  } catch (error) {
+    console.error('Error uploading listing image:', error);
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    res.status(statusCode).json({
+      success: false,
+      message: error?.message || 'Failed to upload image. Please try again later.'
     });
   }
 };

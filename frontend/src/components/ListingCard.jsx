@@ -1,4 +1,5 @@
 import React from "react";
+import { resolveMediaDisplay } from "../utils/mediaUtils.js";
 
 const statusStyles = {
   Available: {
@@ -21,6 +22,7 @@ const statusStyles = {
 function ListingCard({ item, onEdit, onToggleHidden, onDelete, onMarkReturned, onCancelUpcoming }) {
   const badgeStyle = statusStyles[item.status] || statusStyles.Available;
   const hasUpcoming = item.upcoming?.length > 0;
+  const media = resolveMediaDisplay(item.image, "teal");
 
   return (
     <div
@@ -36,8 +38,8 @@ function ListingCard({ item, onEdit, onToggleHidden, onDelete, onMarkReturned, o
       }}
     >
       <div
-        className={`marketplace-card-media ${item.image || "teal"}`}
-        style={{ width: "160px", height: "120px", borderRadius: "12px" }}
+        className={media.className}
+        style={{ ...media.style, width: "160px", height: "120px", borderRadius: "12px" }}
       />
 
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>

@@ -1,4 +1,5 @@
 import React from "react";
+import { resolveMediaDisplay } from "../utils/mediaUtils.js";
 
 function CompletedRentalCard({ rental, onRateOwner }) {
   const statusLabel = rental.statusLabel || "Completed";
@@ -21,6 +22,7 @@ function CompletedRentalCard({ rental, onRateOwner }) {
           border: "1px solid rgba(239, 68, 68, 0.25)",
         };
 
+  const media = resolveMediaDisplay(rental.image, "teal");
   return (
     <div
       style={{
@@ -35,8 +37,8 @@ function CompletedRentalCard({ rental, onRateOwner }) {
       }}
     >
       <div
-        className={`marketplace-card-media ${rental.image || "teal"}`}
-        style={{ width: "160px", height: "120px", borderRadius: "12px" }}
+        className={media.className}
+        style={{ ...media.style, width: "160px", height: "120px", borderRadius: "12px" }}
       />
 
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>

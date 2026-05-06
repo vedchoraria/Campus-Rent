@@ -1,5 +1,6 @@
 import express from 'express';
 import * as listingController from '../controllers/listingController.js';
+import { upload } from '../middleware/uploadMiddleware.js';
 
 const router = express.Router();
 
@@ -13,6 +14,7 @@ router.get('/my-listings', listingController.getMyListings);
 
 // POST /api/listings
 router.post('/', listingController.createListing);
+router.post('/upload-image', upload.single('image'), listingController.uploadListingImage);
 
 // Resolves to GET /api/listings/:id
 router.get('/:id', listingController.getListing);

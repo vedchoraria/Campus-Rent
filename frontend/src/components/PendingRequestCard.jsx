@@ -1,6 +1,8 @@
 import React from "react";
+import { resolveMediaDisplay } from "../utils/mediaUtils.js";
 
 function PendingRequestCard({ request, onCancel, onMessageOwner }) {
+  const media = resolveMediaDisplay(request.image, "teal");
   return (
     <div
       style={{
@@ -15,8 +17,8 @@ function PendingRequestCard({ request, onCancel, onMessageOwner }) {
       }}
     >
       <div
-        className={`marketplace-card-media ${request.image || "teal"}`}
-        style={{ width: "160px", height: "120px", borderRadius: "12px" }}
+        className={media.className}
+        style={{ ...media.style, width: "160px", height: "120px", borderRadius: "12px" }}
       />
 
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
