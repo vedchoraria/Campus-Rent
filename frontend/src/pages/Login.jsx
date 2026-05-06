@@ -1,16 +1,19 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
+import { api } from "../services/api.js";
 
 function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogin = () => {
+  const handleLogin = async (event) => {
+    event.preventDefault();
     setError("");
     if (!email || !password) {
       setError("Email and password are required.");
@@ -22,10 +25,19 @@ function Login() {
       return;
     }
 
-    const name = email.split("@")[0] || "Student";
-    const initials = name.substring(0, 2).toUpperCase();
-    login({ name, email, initials });
-    navigate("/marketplace");
+    try {
+      setIsSubmitting(true);
+      const response = await api.login({
+        collegeEmail: email.trim().toLowerCase(),
+        password
+      });
+      login(response.data);
+      navigate("/marketplace");
+    } catch (err) {
+      setError(err.message || "Unable to login. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -51,7 +63,7 @@ function Login() {
           </div>
         )}
 
-        <form className="auth-form">
+        <form className="auth-form" onSubmit={handleLogin}>
           <label className="auth-label" htmlFor="login-email">
             Student Email
           </label>
@@ -70,9 +82,7 @@ function Login() {
             <label className="auth-label" htmlFor="login-password">
               Password
             </label>
-            <Link to="/login" className="auth-link">
-              Forgot Password?
-            </Link>
+            <span className="auth-link">Use your account password</span>
           </div>
           <div className="auth-field auth-password">
             <input
@@ -93,25 +103,10 @@ function Login() {
             </span>
           </div>
 
-          <button onClick={handleLogin} className="btn primary auth-submit" type="button">
-            Enter the Hub
+          <button className="btn primary auth-submit" type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Signing In..." : "Enter the Hub"}
           </button>
         </form>
-
-        <div className="auth-divider">
-          <span>Or continue with</span>
-        </div>
-
-        <div className="auth-oauth">
-          <button className="auth-provider" type="button">
-            <span className="auth-provider-icon">G</span>
-            Google
-          </button>
-          <button className="auth-provider" type="button">
-            <span className="auth-provider-icon">A</span>
-            Apple
-          </button>
-        </div>
       </div>
 
       <div className="auth-features">

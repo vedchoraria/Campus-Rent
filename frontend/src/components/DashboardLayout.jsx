@@ -7,13 +7,7 @@ function DashboardLayout() {
   const { logout } = useAuth();
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("campusRent_user");
-
-    if (logout) {
-      logout();
-    }
-
+    logout();
     navigate("/login");
   };
 

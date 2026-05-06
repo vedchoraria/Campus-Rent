@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import listingRoutes from './routes/listingRoutes.js';
 import bookingRoutes from './routes/bookingRoutes.js';
+import authRoutes from './routes/authRoutes.js';
 
 const app = express();
 
@@ -17,5 +18,6 @@ app.get('/health', (req, res) => {
 // Future routes will be mounted here
 app.use('/api/listings', listingRoutes);
 app.use('/api/bookings', bookingRoutes);
+app.use('/api/auth', authRoutes);
 
 export default app;

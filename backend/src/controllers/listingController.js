@@ -62,8 +62,7 @@ export const getListing = async (req, res) => {
 
 export const getMyListings = async (req, res) => {
   try {
-    // Temporary hardcoded seeded user (Alex Rivera) until Auth is implemented
-    const userId = "07470ac1-1ca0-42ee-a694-ea9dca3d064c"; 
+    const userId = req.user.id;
     
     const listings = await listingService.getMyListings(userId);
 
@@ -82,8 +81,7 @@ export const getMyListings = async (req, res) => {
 
 export const createListing = async (req, res) => {
   try {
-    // Temporary hardcoded seeded user (Alex Rivera) until Auth is implemented
-    const userId = "07470ac1-1ca0-42ee-a694-ea9dca3d064c";
+    const userId = req.user.id;
     const payload = req.body || {};
 
     const createdListing = await listingService.createListing(userId, payload);

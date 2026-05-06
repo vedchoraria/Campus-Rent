@@ -58,8 +58,8 @@ function Navbar() {
           >
             <div className="profile-trigger">
               <button className="nav-profile-btn">
-                <div className="nav-avatar mini">{user.initials}</div>
-                <span className="nav-username">{user.name}</span>
+                <div className="nav-avatar mini">{(user.fullName || user.name || "U").slice(0, 2).toUpperCase()}</div>
+                <span className="nav-username">{user.fullName || user.name || "Student"}</span>
               </button>
             </div>
             {isOpen && (

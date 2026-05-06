@@ -1,4 +1,5 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+const AUTH_TOKEN_KEY = "campusRent_token";
 
 const parseApiError = async (response) => {
   let message = `API Error: ${response.statusText}`;
@@ -17,16 +18,22 @@ const parseApiError = async (response) => {
 
 export const api = {
   get: async (endpoint, signal) => {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, { signal });
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      signal,
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined
+    });
     if (!response.ok) throw await parseApiError(response);
     return response.json();
   },
 
   post: async (endpoint, data) => {
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
       },
       body: JSON.stringify(data),
     });
@@ -54,9 +61,11 @@ export const api = {
   uploadListingImage: async (file) => {
     const formData = new FormData();
     formData.append("image", file);
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
 
     const response = await fetch(`${API_BASE_URL}/listings/upload-image`, {
       method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       body: formData,
     });
 
@@ -70,5 +79,13 @@ export const api = {
 
   createBooking: async (payload) => {
     return api.post("/bookings", payload);
+  },
+
+  signup: async (payload) => {
+    return api.post("/auth/signup", payload);
+  },
+
+  login: async (payload) => {
+    return api.post("/auth/login", payload);
   }
 };

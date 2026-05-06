@@ -42,8 +42,8 @@ function Profile() {
   }
 
   // Define display data
-  const displayName = profileUser.full_name || profileUser.name || profileUser.email?.split('@')[0] || "Campus User";
-  const userEmail = profileUser.email || "hidden@campus.edu";
+  const displayName = profileUser.full_name || profileUser.fullName || profileUser.name || profileUser.collegeEmail?.split('@')[0] || profileUser.email?.split('@')[0] || "Campus User";
+  const userEmail = profileUser.collegeEmail || profileUser.email || "hidden@campus.edu";
   const userRating = profileUser.rating || 4.9;
   const userReviewsCount = profileUser.reviews_count || 0;
   const itemsLent = profileUser.items_lent || 0;

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
+import { api } from "../services/api.js";
 
 function Signup() {
   const [showPassword, setShowPassword] = useState(false);
@@ -8,10 +9,12 @@ function Signup() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSignup = () => {
+  const handleSignup = async (event) => {
+    event.preventDefault();
     setError("");
     if (!name || !email || !password) {
       setError("All fields are required.");
@@ -29,9 +32,20 @@ function Signup() {
       return;
     }
 
-    const initials = name.substring(0, 2).toUpperCase();
-    login({ name, email, initials });
-    navigate("/marketplace");
+    try {
+      setIsSubmitting(true);
+      const response = await api.signup({
+        fullName: name.trim(),
+        collegeEmail: email.trim().toLowerCase(),
+        password
+      });
+      login(response.data);
+      navigate("/marketplace");
+    } catch (err) {
+      setError(err.message || "Unable to create account. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -57,7 +71,7 @@ function Signup() {
           </div>
         )}
 
-        <form className="auth-form">
+        <form className="auth-form" onSubmit={handleSignup}>
           <label className="auth-label" htmlFor="signup-name">
             Full Name
           </label>
@@ -108,8 +122,8 @@ function Signup() {
             </span>
           </div>
 
-          <button onClick={handleSignup} className="btn primary auth-submit" type="button">
-            Create Account
+          <button className="btn primary auth-submit" type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Creating..." : "Create Account"}
           </button>
           <p className="auth-terms">
             By creating an account, you agree to our Terms of Service and Privacy
@@ -117,20 +131,6 @@ function Signup() {
           </p>
         </form>
 
-        <div className="auth-divider">
-          <span>Or continue with</span>
-        </div>
-
-        <div className="auth-oauth">
-          <button className="auth-provider" type="button">
-            <span className="auth-provider-icon">G</span>
-            Google
-          </button>
-          <button className="auth-provider" type="button">
-            <span className="auth-provider-icon">A</span>
-            Apple
-          </button>
-        </div>
       </div>
 
       <div className="auth-features">

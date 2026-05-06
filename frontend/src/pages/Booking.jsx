@@ -136,12 +136,9 @@ function Booking() {
     submitGuardRef.current = true;
     setIsSubmitting(true);
 
-    const borrowerId = "07470ac1-1ca0-42ee-a694-ea9dca3d064c"; // Seeded Alex Rivera
-
     try {
       const response = await api.createBooking({
         listingId: item.id,
-        borrowerId: borrowerId,
         startDate: startDate,
         endDate: endDate,
         pickupZone: item.location || "Default Zone"

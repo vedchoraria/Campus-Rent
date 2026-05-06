@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
@@ -12,10 +13,12 @@ async function main() {
   console.log('Database cleaned.');
 
   console.log('Seeding Users...');
+  const seedPasswordHash = await bcrypt.hash('Password@123', 10);
   const alex = await prisma.user.create({
     data: {
       fullName: 'Alex Rivera',
       collegeEmail: 'alex.rivera@northcampus.edu',
+      passwordHash: seedPasswordHash,
       department: 'Design Engineering',
       yearOfStudy: 'Senior',
       bio: 'Currently a Senior at North Campus specializing in Sustainable Design. I started using CampusRent to help peers get access to professional tools. I take great care of my gear and expect the same!',
@@ -29,6 +32,7 @@ async function main() {
     data: {
       fullName: 'Samira Patel',
       collegeEmail: 'samira.p@artsdistrict.edu',
+      passwordHash: seedPasswordHash,
       department: 'Photography & Media',
       yearOfStudy: 'Junior',
       bio: 'Photography major! Always looking to rent out my lenses when I\'m not using them. Reach out if you need advice on gear.',
@@ -42,6 +46,7 @@ async function main() {
     data: {
       fullName: 'Ravi Malhotra',
       collegeEmail: 'ravi.m@science.edu',
+      passwordHash: seedPasswordHash,
       department: 'Chemistry',
       yearOfStudy: 'Sophomore',
       lenderRating: 4.5,
@@ -54,6 +59,7 @@ async function main() {
     data: {
       fullName: 'Anika Shah',
       collegeEmail: 'anika.s@northcampus.edu',
+      passwordHash: seedPasswordHash,
       department: 'Computer Science',
       yearOfStudy: 'Freshman',
       preferredPickupZones: ['North Campus Dorms'],

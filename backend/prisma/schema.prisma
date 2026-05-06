@@ -27,6 +27,7 @@ model User {
   id                   String   @id @default(uuid())
   fullName             String
   collegeEmail         String   @unique
+  passwordHash         String
   department           String?
   yearOfStudy          String?
   bio                  String?

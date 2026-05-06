@@ -2,8 +2,7 @@ import * as bookingService from '../services/bookingService.js';
 
 export const getMyBookings = async (req, res) => {
   try {
-    // Temporary hardcoded seeded user (Alex Rivera) until Auth is implemented
-    const userId = "07470ac1-1ca0-42ee-a694-ea9dca3d064c"; 
+    const userId = req.user.id;
     
     const data = await bookingService.getMyBookings(userId);
 
@@ -22,8 +21,7 @@ export const getMyBookings = async (req, res) => {
 
 export const createBooking = async (req, res) => {
   try {
-    // Temporary hardcoded seeded user (Alex Rivera) until Auth is implemented
-    const borrowerId = "07470ac1-1ca0-42ee-a694-ea9dca3d064c";
+    const borrowerId = req.user.id;
     const payload = { ...req.body, borrowerId };
 
     const booking = await bookingService.createBooking(payload);

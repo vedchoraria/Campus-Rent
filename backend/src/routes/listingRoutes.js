@@ -1,6 +1,7 @@
 import express from 'express';
 import * as listingController from '../controllers/listingController.js';
 import { upload } from '../middleware/uploadMiddleware.js';
+import { requireAuth } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
@@ -10,11 +11,11 @@ router.get('/', listingController.getListings);
 
 // GET /api/listings/my-listings
 // Must be registered before /:id to prevent "my-listings" from being treated as an ID
-router.get('/my-listings', listingController.getMyListings);
+router.get('/my-listings', requireAuth, listingController.getMyListings);
 
 // POST /api/listings
-router.post('/', listingController.createListing);
-router.post('/upload-image', upload.single('image'), listingController.uploadListingImage);
+router.post('/', requireAuth, listingController.createListing);
+router.post('/upload-image', requireAuth, upload.single('image'), listingController.uploadListingImage);
 
 // Resolves to GET /api/listings/:id
 router.get('/:id', listingController.getListing);

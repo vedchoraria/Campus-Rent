@@ -1,9 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { api } from "../services/api.js";
+import { useAuth } from "./AuthContext.jsx";
 
 const ListingContext = createContext(null);
 
 export function ListingProvider({ children }) {
+  const { user } = useAuth();
   const [listings, setListings] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -33,7 +35,7 @@ export function ListingProvider({ children }) {
       setIsLoading(true);
       const [globalRes, myRes] = await Promise.all([
         api.getListings(signal),
-        api.getMyListings(signal)
+        user ? api.getMyListings(signal) : Promise.resolve({ data: [] })
       ]);
 
       const mappedGlobal = (globalRes.data || []).map(mapListing);
@@ -61,7 +63,7 @@ export function ListingProvider({ children }) {
     return () => {
       abortController.abort();
     };
-  }, []);
+  }, [user]);
 
   const toggleHidden = (id) => {
     setListings((prev) =>

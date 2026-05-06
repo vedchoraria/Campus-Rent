@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { BOOKING_STATUS } from "../constants/bookingStatus.js";
 import { api } from "../services/api.js";
+import { useAuth } from "./AuthContext.jsx";
 
 const BookingContext = createContext(null);
 
@@ -39,9 +40,15 @@ const hasDateOverlap = (startA, endA, startB, endB) => {
 };
 
 export function BookingProvider({ children }) {
+  const { user } = useAuth();
   const [bookings, setRawBookings] = useState([]);
 
   const refreshBookings = useCallback(async (signal) => {
+    if (!user) {
+      setRawBookings([]);
+      return;
+    }
+
     try {
       const res = await api.getMyBookings(signal);
       if (res.success && res.data) {
@@ -73,7 +80,7 @@ export function BookingProvider({ children }) {
         console.error("Booking API sync failed.", err);
       }
     }
-  }, []);
+  }, [user]);
 
   // Fetch live backend data to synchronize BookingContext
   useEffect(() => {
