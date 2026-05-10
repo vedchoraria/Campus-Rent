@@ -116,3 +116,23 @@ export const uploadListingImage = async (req, res) => {
     });
   }
 };
+
+export const deleteListing = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { id } = req.params;
+    const result = await listingService.deleteListing(id, userId);
+
+    res.status(200).json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    console.error('Error deleting listing:', error);
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    res.status(statusCode).json({
+      success: false,
+      message: error?.message || 'Failed to delete listing. Please try again later.'
+    });
+  }
+};

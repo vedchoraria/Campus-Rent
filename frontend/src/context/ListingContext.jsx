@@ -6,7 +6,8 @@ const ListingContext = createContext(null);
 
 export function ListingProvider({ children }) {
   const { user } = useAuth();
-  const [listings, setListings] = useState([]);
+  const [marketplaceListings, setMarketplaceListings] = useState([]);
+  const [myListings, setMyListings] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -38,17 +39,14 @@ export function ListingProvider({ children }) {
         user ? api.getMyListings(signal) : Promise.resolve({ data: [] })
       ]);
 
-      const mappedGlobal = (globalRes.data || []).map(mapListing);
-      const mappedMine = (myRes.data || []).map(mapListing);
-      const combined = [...mappedGlobal, ...mappedMine];
-      const deduplicated = Array.from(new Map(combined.map((item) => [item.id, item])).values());
-
-      setListings(deduplicated);
+      setMarketplaceListings((globalRes.data || []).map(mapListing));
+      setMyListings((myRes.data || []).map(mapListing));
       setError(null);
     } catch (err) {
       if (err.name === 'AbortError') return;
       console.error("Failed to fetch live listings:", err);
-      setListings([]);
+      setMarketplaceListings([]);
+      setMyListings([]);
       setError(err.message || "Failed to load live listings.");
     } finally {
       if (!signal || !signal.aborted) {
@@ -66,19 +64,31 @@ export function ListingProvider({ children }) {
   }, [user]);
 
   const toggleHidden = (id) => {
-    setListings((prev) =>
+    setMyListings((prev) =>
       prev.map((item) =>
         item.id === id ? { ...item, isHidden: !item.isHidden } : item
       )
     );
   };
 
-  const deleteListing = (id) => {
-    setListings((prev) => prev.filter((item) => item.id !== id));
+  const deleteListing = async (id) => {
+    await api.deleteListing(id);
+    await refreshListings();
   };
 
   return (
-    <ListingContext.Provider value={{ listings, isLoading, error, toggleHidden, deleteListing, setListings, refreshListings }}>
+    <ListingContext.Provider
+      value={{
+        listings: marketplaceListings,
+        marketplaceListings,
+        myListings,
+        isLoading,
+        error,
+        toggleHidden,
+        deleteListing,
+        refreshListings
+      }}
+    >
       {children}
     </ListingContext.Provider>
   );

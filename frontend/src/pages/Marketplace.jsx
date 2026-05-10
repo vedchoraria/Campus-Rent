@@ -28,7 +28,7 @@ function Marketplace() {
   const [activeLocation, setActiveLocation] = useState("All Locations");
   const [sortOption, setSortOption] = useState("Newest");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const { listings, isLoading, error } = useListings();
+  const { marketplaceListings, isLoading, error } = useListings();
   const { bookings } = useBookings();
 
   // Debounce search input
@@ -53,7 +53,7 @@ function Marketplace() {
         return acc;
       }, {});
 
-    let result = listings.filter(item => !item.isHidden);
+    let result = marketplaceListings.filter(item => !item.isHidden);
 
     // Search filter
     if (debouncedSearch) {
@@ -91,7 +91,7 @@ function Marketplace() {
       ...item,
       rentedUntil: ongoingByItemId[String(item.id)]?.end || null,
     }));
-  }, [debouncedSearch, activeCategory, activeLocation, sortOption, bookings, listings]);
+  }, [debouncedSearch, activeCategory, activeLocation, sortOption, bookings, marketplaceListings]);
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);

@@ -41,6 +41,16 @@ export const api = {
     return response.json();
   },
 
+  delete: async (endpoint) => {
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      method: "DELETE",
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined
+    });
+    if (!response.ok) throw await parseApiError(response);
+    return response.json();
+  },
+
   // Dedicated API helpers
   getListings: async (signal) => {
     return api.get("/listings", signal);
@@ -79,6 +89,10 @@ export const api = {
 
   createBooking: async (payload) => {
     return api.post("/bookings", payload);
+  },
+
+  deleteListing: async (id) => {
+    return api.delete(`/listings/${id}`);
   },
 
   signup: async (payload) => {

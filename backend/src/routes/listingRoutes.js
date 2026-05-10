@@ -16,6 +16,7 @@ router.get('/my-listings', requireAuth, listingController.getMyListings);
 // POST /api/listings
 router.post('/', requireAuth, listingController.createListing);
 router.post('/upload-image', requireAuth, upload.single('image'), listingController.uploadListingImage);
+router.delete('/:id', requireAuth, listingController.deleteListing);
 
 // Resolves to GET /api/listings/:id
 router.get('/:id', listingController.getListing);

@@ -1,5 +1,13 @@
 import prisma from '../utils/prismaClient.js';
 
+class ListingError extends Error {
+  constructor(message, statusCode) {
+    super(message);
+    this.name = 'ListingError';
+    this.statusCode = statusCode;
+  }
+}
+
 /**
  * Retrieves all active listings from the database.
  * Uses relation queries to include owner metadata and ordered images.
@@ -167,4 +175,26 @@ export const createListing = async (ownerId, payload) => {
   });
 
   return listing;
+};
+
+export const deleteListing = async (listingId, ownerId) => {
+  const listing = await prisma.listing.findUnique({
+    where: { id: String(listingId) },
+    select: { id: true, ownerId: true, status: true }
+  });
+
+  if (!listing || listing.status === 'deleted') {
+    throw new ListingError('Listing not found.', 404);
+  }
+
+  if (listing.ownerId !== String(ownerId)) {
+    throw new ListingError('You are not allowed to delete this listing.', 403);
+  }
+
+  await prisma.listing.update({
+    where: { id: listing.id },
+    data: { status: 'deleted' }
+  });
+
+  return { id: listing.id };
 };

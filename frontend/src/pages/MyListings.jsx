@@ -32,11 +32,11 @@ const uniqueById = (items) => {
 
 function MyListings() {
   const [activeTab, setActiveTab] = useState(tabs[0]);
-  const { listings, toggleHidden, deleteListing } = useListings();
+  const { myListings, toggleHidden, deleteListing } = useListings();
   const { bookings, approveBooking, rejectBooking, markReturned, cancelBooking } = useBookings();
 
   const formattedListings = useMemo(() => {
-    return listings.map((item) => {
+    return myListings.map((item) => {
       const itemBookings = uniqueById(
         bookings.filter((booking) => String(booking.itemId) === String(item.id))
       );
@@ -77,17 +77,17 @@ function MyListings() {
         rawItem: item,
       };
     });
-  }, [listings, bookings]);
+  }, [myListings, bookings]);
 
   const approvals = useMemo(() => {
-    const listingIds = new Set(listings.map((listing) => String(listing.id)));
+    const listingIds = new Set(myListings.map((listing) => String(listing.id)));
     return uniqueById(bookings)
       .filter(
         (booking) =>
           booking.status === BOOKING_STATUS.pending && listingIds.has(String(booking.itemId))
       )
       .map((booking) => {
-        const item = listings.find((listing) => String(listing.id) === String(booking.itemId));
+        const item = myListings.find((listing) => String(listing.id) === String(booking.itemId));
         return {
           id: booking.id,
           title: item?.title || booking.title,
@@ -95,10 +95,10 @@ function MyListings() {
           dates: formatRange(booking.start, booking.end),
         };
       });
-  }, [bookings, listings]);
+  }, [bookings, myListings]);
 
   const history = useMemo(() => {
-    const listingIds = new Set(listings.map((listing) => String(listing.id)));
+    const listingIds = new Set(myListings.map((listing) => String(listing.id)));
     return uniqueById(bookings)
       .filter(
         (booking) =>
@@ -107,7 +107,7 @@ function MyListings() {
           ) && listingIds.has(String(booking.itemId))
       )
       .map((booking) => {
-        const item = listings.find((listing) => String(listing.id) === String(booking.itemId));
+        const item = myListings.find((listing) => String(listing.id) === String(booking.itemId));
         const statusLabel =
           booking.status === BOOKING_STATUS.cancelled
             ? "Cancelled"
@@ -129,7 +129,7 @@ function MyListings() {
         };
       })
       .sort((a, b) => new Date(b.timelineAt) - new Date(a.timelineAt));
-  }, [bookings, listings]);
+  }, [bookings, myListings]);
 
   const handleEditListing = (item) => {
     window.alert(`Edit listing: ${item.name}`);
@@ -139,8 +139,12 @@ function MyListings() {
     toggleHidden(item.id);
   };
 
-  const handleDeleteListing = (item) => {
-    deleteListing(item.id);
+  const handleDeleteListing = async (item) => {
+    try {
+      await deleteListing(item.id);
+    } catch (err) {
+      window.alert(err.message || "Failed to delete listing.");
+    }
   };
 
   const handleApprove = (approval) => {
