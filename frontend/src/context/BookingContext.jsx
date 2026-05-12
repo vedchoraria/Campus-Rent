@@ -17,28 +17,6 @@ const dedupeBookings = (items) => {
   return Array.from(byId.values());
 };
 
-const updateBookingStatus = (items, id, status, extra = {}) => {
-  const targetId = String(id);
-  let wasUpdated = false;
-  const next = normalizeList(items).map((booking) => {
-    if (String(booking.id) !== targetId) return booking;
-    wasUpdated = true;
-    return { ...booking, status, ...extra };
-  });
-  return wasUpdated ? next : items;
-};
-
-const hasDateOverlap = (startA, endA, startB, endB) => {
-  const aStart = new Date(startA);
-  const aEnd = new Date(endA);
-  const bStart = new Date(startB);
-  const bEnd = new Date(endB);
-  if ([aStart, aEnd, bStart, bEnd].some((date) => Number.isNaN(date.getTime()))) {
-    return false;
-  }
-  return aStart <= bEnd && bStart <= aEnd;
-};
-
 export function BookingProvider({ children }) {
   const { user } = useAuth();
   const [bookings, setRawBookings] = useState([]);
@@ -97,62 +75,25 @@ export function BookingProvider({ children }) {
     });
   }, []);
 
-  const approveBooking = useCallback((id) => {
-    setRawBookings((prev) => {
-      const targetId = String(id);
-      const targetBooking = prev.find((booking) => String(booking.id) === targetId);
-      if (!targetBooking) return prev;
+  const approveBooking = useCallback(async (id) => {
+    await api.updateBookingStatus(id, BOOKING_STATUS.upcoming);
+    await refreshBookings();
+  }, [refreshBookings]);
 
-      const hasConflict = prev.some((booking) => {
-        if (String(booking.id) === targetId) return false;
-        if (String(booking.itemId) !== String(targetBooking.itemId)) return false;
-        if (
-          booking.status !== BOOKING_STATUS.upcoming &&
-          booking.status !== BOOKING_STATUS.ongoing
-        ) {
-          return false;
-        }
-        return hasDateOverlap(
-          targetBooking.start,
-          targetBooking.end,
-          booking.start,
-          booking.end
-        );
-      });
+  const rejectBooking = useCallback(async (id) => {
+    await api.updateBookingStatus(id, BOOKING_STATUS.rejected);
+    await refreshBookings();
+  }, [refreshBookings]);
 
-      if (hasConflict) {
-        if (typeof window !== "undefined") {
-          window.alert("Cannot approve: dates overlap with existing confirmed booking");
-        }
-        return prev;
-      }
+  const cancelBooking = useCallback(async (id) => {
+    await api.updateBookingStatus(id, BOOKING_STATUS.cancelled);
+    await refreshBookings();
+  }, [refreshBookings]);
 
-      return dedupeBookings(updateBookingStatus(prev, id, BOOKING_STATUS.upcoming));
-    });
-  }, []);
-
-  const rejectBooking = useCallback((id) => {
-    setRawBookings((prev) =>
-      dedupeBookings(updateBookingStatus(prev, id, BOOKING_STATUS.rejected))
-    );
-  }, []);
-
-  const cancelBooking = useCallback((id, cancelledBy = "borrower") => {
-    setRawBookings((prev) =>
-      dedupeBookings(
-        updateBookingStatus(prev, id, BOOKING_STATUS.cancelled, {
-          cancelledBy,
-          cancelledAt: new Date().toISOString(),
-        })
-      )
-    );
-  }, []);
-
-  const markReturned = useCallback((id) => {
-    setRawBookings((prev) =>
-      dedupeBookings(updateBookingStatus(prev, id, BOOKING_STATUS.completed))
-    );
-  }, []);
+  const markReturned = useCallback(async (id) => {
+    await api.updateBookingStatus(id, BOOKING_STATUS.completed);
+    await refreshBookings();
+  }, [refreshBookings]);
 
   const value = useMemo(
     () => ({

@@ -179,7 +179,13 @@ function MyBookings() {
             <PendingRequestCard
               key={request.id}
               request={request}
-              onCancel={() => cancelBooking(request.id, "borrower")}
+              onCancel={async () => {
+                try {
+                  await cancelBooking(request.id, "borrower");
+                } catch (err) {
+                  window.alert(err.message || "Failed to cancel booking.");
+                }
+              }}
               onMessageOwner={handleComingSoon}
             />
           ))}
@@ -192,7 +198,13 @@ function MyBookings() {
             <BorrowedItemCard
               key={rental.id}
               rental={rental}
-              onMarkReturned={() => markReturned(rental.id)}
+              onMarkReturned={async () => {
+                try {
+                  await markReturned(rental.id);
+                } catch (err) {
+                  window.alert(err.message || "Failed to mark booking as returned.");
+                }
+              }}
               onReportIssue={handleComingSoon}
               onChat={handleComingSoon}
             />
@@ -206,7 +218,13 @@ function MyBookings() {
             <UpcomingRentalCard
               key={rental.id}
               rental={rental}
-              onCancel={() => cancelBooking(rental.id, "borrower")}
+              onCancel={async () => {
+                try {
+                  await cancelBooking(rental.id, "borrower");
+                } catch (err) {
+                  window.alert(err.message || "Failed to cancel booking.");
+                }
+              }}
               onChat={handleComingSoon}
             />
           ))}

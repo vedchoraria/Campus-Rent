@@ -41,6 +41,20 @@ export const api = {
     return response.json();
   },
 
+  patch: async (endpoint, data) => {
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) throw await parseApiError(response);
+    return response.json();
+  },
+
   delete: async (endpoint) => {
     const token = localStorage.getItem(AUTH_TOKEN_KEY);
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -89,6 +103,10 @@ export const api = {
 
   createBooking: async (payload) => {
     return api.post("/bookings", payload);
+  },
+
+  updateBookingStatus: async (bookingId, status) => {
+    return api.patch(`/bookings/${bookingId}/status`, { status });
   },
 
   deleteListing: async (id) => {

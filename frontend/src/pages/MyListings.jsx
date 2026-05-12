@@ -147,26 +147,42 @@ function MyListings() {
     }
   };
 
-  const handleApprove = (approval) => {
-    approveBooking(approval.id);
+  const handleApprove = async (approval) => {
+    try {
+      await approveBooking(approval.id);
+    } catch (err) {
+      window.alert(err.message || "Failed to approve booking.");
+    }
   };
 
-  const handleReject = (approval) => {
-    rejectBooking(approval.id);
+  const handleReject = async (approval) => {
+    try {
+      await rejectBooking(approval.id);
+    } catch (err) {
+      window.alert(err.message || "Failed to reject booking.");
+    }
   };
 
-  const handleMarkReturned = (item) => {
+  const handleMarkReturned = async (item) => {
     const activeBooking = bookings.find(
       (booking) =>
         String(booking.itemId) === String(item.id) && booking.status === BOOKING_STATUS.ongoing
     );
     if (activeBooking) {
-      markReturned(activeBooking.id);
+      try {
+        await markReturned(activeBooking.id);
+      } catch (err) {
+        window.alert(err.message || "Failed to mark booking as returned.");
+      }
     }
   };
 
-  const handleCancelUpcoming = (bookingId) => {
-    cancelBooking(bookingId, "lender");
+  const handleCancelUpcoming = async (bookingId) => {
+    try {
+      await cancelBooking(bookingId, "lender");
+    } catch (err) {
+      window.alert(err.message || "Failed to cancel booking.");
+    }
   };
 
   return (

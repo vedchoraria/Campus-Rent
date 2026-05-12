@@ -118,3 +118,95 @@ export const createBooking = async (payload) => {
 
   return booking;
 };
+
+const ALLOWED_TARGET_STATUSES = new Set(['upcoming', 'rejected', 'cancelled', 'completed']);
+
+export const updateBookingStatus = async ({ bookingId, actorId, status }) => {
+  if (!bookingId || !actorId || !status) {
+    throw new BookingError('bookingId, actorId and status are required.', 400);
+  }
+
+  const nextStatus = String(status).toLowerCase();
+  if (!ALLOWED_TARGET_STATUSES.has(nextStatus)) {
+    throw new BookingError('Unsupported booking status transition.', 400);
+  }
+
+  const booking = await prisma.booking.findUnique({
+    where: { id: String(bookingId) },
+    select: {
+      id: true,
+      listingId: true,
+      borrowerId: true,
+      ownerId: true,
+      startDate: true,
+      endDate: true,
+      status: true
+    }
+  });
+
+  if (!booking) {
+    throw new BookingError('Booking not found.', 404);
+  }
+
+  const isOwner = booking.ownerId === String(actorId);
+  const isBorrower = booking.borrowerId === String(actorId);
+  if (!isOwner && !isBorrower) {
+    throw new BookingError('You are not authorized to update this booking.', 403);
+  }
+
+  const now = new Date();
+  const data = {};
+
+  if (nextStatus === 'upcoming') {
+    if (!isOwner) {
+      throw new BookingError('Only the listing owner can approve this booking.', 403);
+    }
+    if (booking.status !== 'pending') {
+      throw new BookingError('Only pending bookings can be approved.', 409);
+    }
+
+    const conflict = await prisma.booking.findFirst({
+      where: {
+        listingId: booking.listingId,
+        id: { not: booking.id },
+        status: { in: ['upcoming', 'ongoing'] },
+        startDate: { lte: booking.endDate },
+        endDate: { gte: booking.startDate }
+      },
+      select: { id: true }
+    });
+
+    if (conflict) {
+      throw new BookingError('Cannot approve: dates overlap with an existing confirmed booking.', 409);
+    }
+
+    data.status = 'upcoming';
+    data.approvedAt = now;
+  } else if (nextStatus === 'rejected') {
+    if (!isOwner) {
+      throw new BookingError('Only the listing owner can reject this booking.', 403);
+    }
+    if (booking.status !== 'pending') {
+      throw new BookingError('Only pending bookings can be rejected.', 409);
+    }
+    data.status = 'rejected';
+  } else if (nextStatus === 'cancelled') {
+    if (!['pending', 'upcoming', 'ongoing'].includes(booking.status)) {
+      throw new BookingError('Only pending, upcoming, or ongoing bookings can be cancelled.', 409);
+    }
+    data.status = 'cancelled';
+    data.cancelledAt = now;
+    data.cancelledById = String(actorId);
+  } else if (nextStatus === 'completed') {
+    if (!['upcoming', 'ongoing'].includes(booking.status)) {
+      throw new BookingError('Only active bookings can be marked as completed.', 409);
+    }
+    data.status = 'completed';
+    data.returnedAt = now;
+  }
+
+  return prisma.booking.update({
+    where: { id: booking.id },
+    data
+  });
+};

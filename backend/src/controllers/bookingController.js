@@ -39,3 +39,29 @@ export const createBooking = async (req, res) => {
     });
   }
 };
+
+export const updateBookingStatus = async (req, res) => {
+  try {
+    const actorId = req.user.id;
+    const { bookingId } = req.params;
+    const { status } = req.body || {};
+
+    const booking = await bookingService.updateBookingStatus({
+      bookingId,
+      actorId,
+      status
+    });
+
+    res.status(200).json({
+      success: true,
+      data: booking
+    });
+  } catch (error) {
+    console.error('Error in updateBookingStatus controller:', error);
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    res.status(statusCode).json({
+      success: false,
+      message: error?.message || 'Failed to update booking status. Please try again later.'
+    });
+  }
+};
