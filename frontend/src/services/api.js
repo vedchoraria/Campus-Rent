@@ -1,4 +1,23 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+const normalizeBaseUrl = (url) => String(url || "").trim().replace(/\/$/, "");
+
+const resolveApiBaseUrl = () => {
+  const configured = normalizeBaseUrl(import.meta.env.VITE_API_URL);
+  const isDevelopment = import.meta.env.DEV;
+
+  if (configured) {
+    return configured;
+  }
+
+  if (isDevelopment) {
+    return "http://localhost:5000/api";
+  }
+
+  throw new Error(
+    "Missing VITE_API_URL. Set VITE_API_URL in your production environment."
+  );
+};
+
+const API_BASE_URL = resolveApiBaseUrl();
 const AUTH_TOKEN_KEY = "campusRent_token";
 
 const parseApiError = async (response) => {
