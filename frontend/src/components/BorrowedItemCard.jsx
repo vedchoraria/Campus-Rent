@@ -1,7 +1,15 @@
 import React from "react";
 import { resolveMediaDisplay } from "../utils/mediaUtils.js";
 
-function BorrowedItemCard({ rental, onMarkReturned, onReportIssue, onChat }) {
+function BorrowedItemCard({
+  rental,
+  onPrimaryAction,
+  onReportIssue,
+  onChat,
+  primaryActionLabel = "Mark as Returned",
+  primaryActionDisabled = false,
+  lifecycleNote = ""
+}) {
   const media = resolveMediaDisplay(rental.image, "teal");
   return (
     <div
@@ -31,15 +39,17 @@ function BorrowedItemCard({ rental, onMarkReturned, onReportIssue, onChat }) {
           <div>Rental dates: {rental.dates}</div>
           <div>Deposit: {rental.deposit}</div>
           <div>Total paid: {rental.total}</div>
+          {lifecycleNote ? <div>{lifecycleNote}</div> : null}
         </div>
 
         <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
           <button
             className="btn primary"
             style={{ padding: "8px 14px", fontSize: "14px" }}
-            onClick={() => onMarkReturned?.(rental)}
+            onClick={() => onPrimaryAction?.(rental)}
+            disabled={primaryActionDisabled}
           >
-            Mark as Returned
+            {primaryActionLabel}
           </button>
           <button
             className="btn outline"

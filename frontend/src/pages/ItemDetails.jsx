@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { api } from "../services/api.js";
 import ItemGallery from "../components/ItemGallery.jsx";
@@ -126,7 +126,7 @@ function ItemDetails() {
       
       const activeBookings = bookings.filter(
         (b) => String(b.itemId) === String(item.id) && 
-               (b.status === BOOKING_STATUS.upcoming || b.status === BOOKING_STATUS.ongoing)
+               (b.status === BOOKING_STATUS.approved || b.status === BOOKING_STATUS.itemGiven || b.status === BOOKING_STATUS.ongoing || b.status === BOOKING_STATUS.returnPending)
       );
 
       const availability = checkAvailability(start, end, activeBookings);
@@ -164,7 +164,7 @@ function ItemDetails() {
       {/* Back Navigation & Breadcrumbs */}
       <nav style={{ fontSize: '14px', color: 'var(--muted)', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>
         <button onClick={() => navigate(-1)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--primary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <span>←</span> Back
+          <span>â†</span> Back
         </button>
         <span>|</span>
         <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>Home</Link>
@@ -210,3 +210,4 @@ function ItemDetails() {
 }
 
 export default ItemDetails;
+

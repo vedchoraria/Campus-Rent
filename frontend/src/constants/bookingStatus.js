@@ -1,7 +1,9 @@
 export const BOOKING_STATUS = {
-  pending: "pending",
-  upcoming: "upcoming",
+  requested: "requested",
+  approved: "approved",
+  itemGiven: "item_given",
   ongoing: "ongoing",
+  returnPending: "return_pending",
   completed: "completed",
   cancelled: "cancelled",
   rejected: "rejected",

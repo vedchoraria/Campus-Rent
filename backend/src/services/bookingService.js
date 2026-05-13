@@ -8,6 +8,24 @@ class BookingError extends Error {
   }
 }
 
+const BOOKING_STATUS = {
+  requested: 'requested',
+  approved: 'approved',
+  itemGiven: 'item_given',
+  ongoing: 'ongoing',
+  returnPending: 'return_pending',
+  completed: 'completed',
+  rejected: 'rejected',
+  cancelled: 'cancelled'
+};
+
+const BLOCKING_BOOKING_STATUSES = [
+  BOOKING_STATUS.approved,
+  BOOKING_STATUS.itemGiven,
+  BOOKING_STATUS.ongoing,
+  BOOKING_STATUS.returnPending
+];
+
 export const getMyBookings = async (userId) => {
   const commonInclude = {
     listing: {
@@ -83,7 +101,7 @@ export const createBooking = async (payload) => {
   const overlap = await prisma.booking.findFirst({
     where: {
       listingId: listing.id,
-      status: { in: ['upcoming', 'ongoing'] },
+      status: { in: BLOCKING_BOOKING_STATUSES },
       startDate: { lte: parsedEnd },
       endDate: { gte: parsedStart }
     },
@@ -108,7 +126,7 @@ export const createBooking = async (payload) => {
       ownerId: listing.ownerId,
       startDate: parsedStart,
       endDate: parsedEnd,
-      status: 'pending',
+      status: BOOKING_STATUS.requested,
       totalPriceSnapshot,
       securityDepositSnapshot: listing.securityDeposit,
       pickupZone: pickupZone || 'Default Zone',
@@ -119,7 +137,15 @@ export const createBooking = async (payload) => {
   return booking;
 };
 
-const ALLOWED_TARGET_STATUSES = new Set(['upcoming', 'rejected', 'cancelled', 'completed']);
+const ALLOWED_TARGET_STATUSES = new Set([
+  BOOKING_STATUS.approved,
+  BOOKING_STATUS.itemGiven,
+  BOOKING_STATUS.ongoing,
+  BOOKING_STATUS.returnPending,
+  BOOKING_STATUS.completed,
+  BOOKING_STATUS.rejected,
+  BOOKING_STATUS.cancelled
+]);
 
 export const updateBookingStatus = async ({ bookingId, actorId, status }) => {
   if (!bookingId || !actorId || !status) {
@@ -157,19 +183,19 @@ export const updateBookingStatus = async ({ bookingId, actorId, status }) => {
   const now = new Date();
   const data = {};
 
-  if (nextStatus === 'upcoming') {
+  if (nextStatus === BOOKING_STATUS.approved) {
     if (!isOwner) {
       throw new BookingError('Only the listing owner can approve this booking.', 403);
     }
-    if (booking.status !== 'pending') {
-      throw new BookingError('Only pending bookings can be approved.', 409);
+    if (booking.status !== BOOKING_STATUS.requested) {
+      throw new BookingError('Only requested bookings can be approved.', 409);
     }
 
     const conflict = await prisma.booking.findFirst({
       where: {
         listingId: booking.listingId,
         id: { not: booking.id },
-        status: { in: ['upcoming', 'ongoing'] },
+        status: { in: BLOCKING_BOOKING_STATUSES },
         startDate: { lte: booking.endDate },
         endDate: { gte: booking.startDate }
       },
@@ -180,29 +206,56 @@ export const updateBookingStatus = async ({ bookingId, actorId, status }) => {
       throw new BookingError('Cannot approve: dates overlap with an existing confirmed booking.', 409);
     }
 
-    data.status = 'upcoming';
+    data.status = BOOKING_STATUS.approved;
     data.approvedAt = now;
-  } else if (nextStatus === 'rejected') {
+  } else if (nextStatus === BOOKING_STATUS.itemGiven) {
+    if (!isOwner) {
+      throw new BookingError('Only the listing owner can mark this booking as item given.', 403);
+    }
+    if (booking.status !== BOOKING_STATUS.approved) {
+      throw new BookingError('Only approved bookings can move to item given.', 409);
+    }
+    data.status = BOOKING_STATUS.itemGiven;
+  } else if (nextStatus === BOOKING_STATUS.ongoing) {
+    if (!isBorrower) {
+      throw new BookingError('Only the borrower can confirm item receipt.', 403);
+    }
+    if (booking.status !== BOOKING_STATUS.itemGiven) {
+      throw new BookingError('Booking must be item given before it becomes ongoing.', 409);
+    }
+    data.status = BOOKING_STATUS.ongoing;
+  } else if (nextStatus === BOOKING_STATUS.returnPending) {
+    if (!isBorrower) {
+      throw new BookingError('Only the borrower can request return.', 403);
+    }
+    if (booking.status !== BOOKING_STATUS.ongoing) {
+      throw new BookingError('Only ongoing bookings can request return.', 409);
+    }
+    data.status = BOOKING_STATUS.returnPending;
+  } else if (nextStatus === BOOKING_STATUS.completed) {
+    if (!isOwner) {
+      throw new BookingError('Only the listing owner can confirm return.', 403);
+    }
+    if (booking.status !== BOOKING_STATUS.returnPending) {
+      throw new BookingError('Booking must be return pending before completion.', 409);
+    }
+    data.status = BOOKING_STATUS.completed;
+    data.returnedAt = now;
+  } else if (nextStatus === BOOKING_STATUS.rejected) {
     if (!isOwner) {
       throw new BookingError('Only the listing owner can reject this booking.', 403);
     }
-    if (booking.status !== 'pending') {
-      throw new BookingError('Only pending bookings can be rejected.', 409);
+    if (booking.status !== BOOKING_STATUS.requested) {
+      throw new BookingError('Only requested bookings can be rejected.', 409);
     }
-    data.status = 'rejected';
-  } else if (nextStatus === 'cancelled') {
-    if (!['pending', 'upcoming', 'ongoing'].includes(booking.status)) {
-      throw new BookingError('Only pending, upcoming, or ongoing bookings can be cancelled.', 409);
+    data.status = BOOKING_STATUS.rejected;
+  } else if (nextStatus === BOOKING_STATUS.cancelled) {
+    if (![BOOKING_STATUS.requested, BOOKING_STATUS.approved].includes(booking.status)) {
+      throw new BookingError('Only requested or approved bookings can be cancelled.', 409);
     }
-    data.status = 'cancelled';
+    data.status = BOOKING_STATUS.cancelled;
     data.cancelledAt = now;
     data.cancelledById = String(actorId);
-  } else if (nextStatus === 'completed') {
-    if (!['upcoming', 'ongoing'].includes(booking.status)) {
-      throw new BookingError('Only active bookings can be marked as completed.', 409);
-    }
-    data.status = 'completed';
-    data.returnedAt = now;
   }
 
   return prisma.booking.update({

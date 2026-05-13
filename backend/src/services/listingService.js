@@ -86,7 +86,7 @@ export const getListingById = async (id) => {
       bookings: {
         where: {
           status: {
-            in: ['upcoming', 'ongoing']
+            in: ['approved', 'item_given', 'ongoing', 'return_pending']
           }
         },
         select: {

@@ -1,4 +1,4 @@
-import { BOOKING_STATUS } from "../constants/bookingStatus.js";
+﻿import { BOOKING_STATUS } from "../constants/bookingStatus.js";
 
 export const userBookings = [
   {
@@ -8,7 +8,7 @@ export const userBookings = [
     image: "blue",
     start: "2026-04-18",
     end: "2026-04-21",
-    status: BOOKING_STATUS.pending,
+    status: BOOKING_STATUS.requested,
     owner: "Priya S.",
     requester: "Anika Shah",
     submittedAt: "2026-04-14",
@@ -22,7 +22,7 @@ export const userBookings = [
     image: "teal",
     start: "2026-04-22",
     end: "2026-04-24",
-    status: BOOKING_STATUS.pending,
+    status: BOOKING_STATUS.requested,
     owner: "Omar K.",
     requester: "Ravi Malhotra",
     submittedAt: "2026-04-13",
@@ -36,7 +36,7 @@ export const userBookings = [
     image: "blue",
     start: "2026-04-20",
     end: "2026-04-23",
-    status: BOOKING_STATUS.upcoming,
+    status: BOOKING_STATUS.approved,
     owner: "Priya S.",
     pickupAt: "2026-04-20T10:00:00",
     totalAmount: 3000,
@@ -229,3 +229,4 @@ const mockData = [
 ];
 
 export default mockData;
+

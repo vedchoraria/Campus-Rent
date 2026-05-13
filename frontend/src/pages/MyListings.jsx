@@ -33,15 +33,17 @@ const uniqueById = (items) => {
 function MyListings() {
   const [activeTab, setActiveTab] = useState(tabs[0]);
   const { myListings, toggleHidden, deleteListing } = useListings();
-  const { bookings, approveBooking, rejectBooking, markReturned, cancelBooking } = useBookings();
+  const { bookings, approveBooking, rejectBooking, cancelBooking, markItemGiven, confirmReturn } = useBookings();
 
   const formattedListings = useMemo(() => {
     return myListings.map((item) => {
       const itemBookings = uniqueById(
         bookings.filter((booking) => String(booking.itemId) === String(item.id))
       );
-      const ongoing = itemBookings.find((booking) => booking.status === BOOKING_STATUS.ongoing);
-      const upcoming = itemBookings.filter((booking) => booking.status === BOOKING_STATUS.upcoming);
+      const active = itemBookings.find((booking) =>
+        [BOOKING_STATUS.itemGiven, BOOKING_STATUS.ongoing, BOOKING_STATUS.returnPending].includes(booking.status)
+      );
+      const upcoming = itemBookings.filter((booking) => booking.status === BOOKING_STATUS.approved);
 
       upcoming.sort((a, b) => new Date(a.start) - new Date(b.start));
 
@@ -53,7 +55,7 @@ function MyListings() {
             }
           : null;
 
-      const status = ongoing ? "Rented" : "Available";
+      const status = active ? "Rented" : "Available";
 
       return {
         id: item.id,
@@ -62,10 +64,12 @@ function MyListings() {
         status,
         isHidden: item.isHidden,
         image: item.images?.[0] || "teal",
-        currentRental: ongoing
+        currentRental: active
           ? {
-              dates: formatRange(ongoing.start, ongoing.end),
-              renter: ongoing.requester || "Student",
+              id: active.id,
+              dates: formatRange(active.start, active.end),
+              renter: active.requester || "Student",
+              status: active.status
             }
           : null,
         nextReservation,
@@ -73,6 +77,7 @@ function MyListings() {
           id: booking.id,
           dates: formatRange(booking.start, booking.end),
           renter: booking.requester || "Student",
+          status: booking.status,
         })),
         rawItem: item,
       };
@@ -84,7 +89,7 @@ function MyListings() {
     return uniqueById(bookings)
       .filter(
         (booking) =>
-          booking.status === BOOKING_STATUS.pending && listingIds.has(String(booking.itemId))
+          booking.status === BOOKING_STATUS.requested && listingIds.has(String(booking.itemId))
       )
       .map((booking) => {
         const item = myListings.find((listing) => String(listing.id) === String(booking.itemId));
@@ -163,17 +168,22 @@ function MyListings() {
     }
   };
 
-  const handleMarkReturned = async (item) => {
-    const activeBooking = bookings.find(
-      (booking) =>
-        String(booking.itemId) === String(item.id) && booking.status === BOOKING_STATUS.ongoing
-    );
+  const handleConfirmReturn = async (item) => {
+    const activeBooking = bookings.find((booking) => String(booking.id) === String(item.currentRental?.id));
     if (activeBooking) {
       try {
-        await markReturned(activeBooking.id);
+        await confirmReturn(activeBooking.id);
       } catch (err) {
-        window.alert(err.message || "Failed to mark booking as returned.");
+        window.alert(err.message || "Failed to confirm return.");
       }
+    }
+  };
+
+  const handleMarkItemGiven = async (bookingId) => {
+    try {
+      await markItemGiven(bookingId);
+    } catch (err) {
+      window.alert(err.message || "Failed to mark item as given.");
     }
   };
 
@@ -247,7 +257,8 @@ function MyListings() {
               onEdit={handleEditListing}
               onToggleHidden={handleToggleHidden}
               onDelete={handleDeleteListing}
-              onMarkReturned={handleMarkReturned}
+              onConfirmReturn={handleConfirmReturn}
+              onMarkItemGiven={handleMarkItemGiven}
               onCancelUpcoming={handleCancelUpcoming}
             />
           ))}

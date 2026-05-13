@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { resolveMediaDisplay } from "../utils/mediaUtils.js";
 
 const statusStyles = {
@@ -19,7 +19,15 @@ const statusStyles = {
   },
 };
 
-function ListingCard({ item, onEdit, onToggleHidden, onDelete, onMarkReturned, onCancelUpcoming }) {
+function ListingCard({
+  item,
+  onEdit,
+  onToggleHidden,
+  onDelete,
+  onConfirmReturn,
+  onMarkItemGiven,
+  onCancelUpcoming
+}) {
   const badgeStyle = statusStyles[item.status] || statusStyles.Available;
   const hasUpcoming = item.upcoming?.length > 0;
   const media = resolveMediaDisplay(item.image, "teal");
@@ -97,9 +105,13 @@ function ListingCard({ item, onEdit, onToggleHidden, onDelete, onMarkReturned, o
               Current renter: <strong style={{ color: "var(--text-main, #1f2937)" }}>{item.currentRental.renter}</strong>
             </div>
             <div>Active rental: {item.currentRental.dates}</div>
-            <button className="btn primary" style={{ width: "fit-content", padding: "8px 14px", fontSize: "14px" }} onClick={() => onMarkReturned?.(item)}>
-              Mark as Returned
-            </button>
+            {item.currentRental.status === "return_pending" ? (
+              <button className="btn primary" style={{ width: "fit-content", padding: "8px 14px", fontSize: "14px" }} onClick={() => onConfirmReturn?.(item)}>
+                Confirm Return
+              </button>
+            ) : (
+              <div>Waiting for borrower return request.</div>
+            )}
           </div>
         )}
 
@@ -123,12 +135,21 @@ function ListingCard({ item, onEdit, onToggleHidden, onDelete, onMarkReturned, o
                   }}
                 >
                   <span>{reservation.dates} · {reservation.renter}</span>
-                  <button 
-                    onClick={() => onCancelUpcoming?.(reservation.id)}
-                    style={{ background: 'none', border: 'none', color: '#e11d48', cursor: 'pointer', fontSize: '13px', fontWeight: 600, padding: '4px 8px' }}
-                  >
-                    Cancel
-                  </button>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <button
+                      onClick={() => onMarkItemGiven?.(reservation.id)}
+                      disabled={reservation.status !== "approved"}
+                      style={{ background: "none", border: "none", color: "#0d9488", cursor: "pointer", fontSize: "13px", fontWeight: 600, padding: "4px 8px", opacity: reservation.status === "approved" ? 1 : 0.45 }}
+                    >
+                      {reservation.status === "approved" ? "Mark Given" : "Given"}
+                    </button>
+                    <button
+                      onClick={() => onCancelUpcoming?.(reservation.id)}
+                      style={{ background: "none", border: "none", color: "#e11d48", cursor: "pointer", fontSize: "13px", fontWeight: 600, padding: "4px 8px" }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -164,3 +185,4 @@ function ListingCard({ item, onEdit, onToggleHidden, onDelete, onMarkReturned, o
 }
 
 export default ListingCard;
+

@@ -2,7 +2,7 @@ import React from "react";
 import { BOOKING_STATUS } from "../constants/bookingStatus.js";
 
 function ApprovalCard({ approval, onApprove, onReject }) {
-  const isApproved = approval.status === BOOKING_STATUS.upcoming;
+  const isApproved = approval.status === BOOKING_STATUS.approved;
 
   return (
     <div

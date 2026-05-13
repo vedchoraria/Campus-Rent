@@ -76,7 +76,7 @@ export function BookingProvider({ children }) {
   }, []);
 
   const approveBooking = useCallback(async (id) => {
-    await api.updateBookingStatus(id, BOOKING_STATUS.upcoming);
+    await api.updateBookingStatus(id, BOOKING_STATUS.approved);
     await refreshBookings();
   }, [refreshBookings]);
 
@@ -95,6 +95,26 @@ export function BookingProvider({ children }) {
     await refreshBookings();
   }, [refreshBookings]);
 
+  const markItemGiven = useCallback(async (id) => {
+    await api.updateBookingStatus(id, BOOKING_STATUS.itemGiven);
+    await refreshBookings();
+  }, [refreshBookings]);
+
+  const confirmItemReceived = useCallback(async (id) => {
+    await api.updateBookingStatus(id, BOOKING_STATUS.ongoing);
+    await refreshBookings();
+  }, [refreshBookings]);
+
+  const requestReturn = useCallback(async (id) => {
+    await api.updateBookingStatus(id, BOOKING_STATUS.returnPending);
+    await refreshBookings();
+  }, [refreshBookings]);
+
+  const confirmReturn = useCallback(async (id) => {
+    await api.updateBookingStatus(id, BOOKING_STATUS.completed);
+    await refreshBookings();
+  }, [refreshBookings]);
+
   const value = useMemo(
     () => ({
       bookings,
@@ -102,10 +122,14 @@ export function BookingProvider({ children }) {
       rejectBooking,
       cancelBooking,
       markReturned,
+      markItemGiven,
+      confirmItemReceived,
+      requestReturn,
+      confirmReturn,
       setBookings,
       refreshBookings,
     }),
-    [bookings, approveBooking, rejectBooking, cancelBooking, markReturned, setBookings, refreshBookings]
+    [bookings, approveBooking, rejectBooking, cancelBooking, markReturned, markItemGiven, confirmItemReceived, requestReturn, confirmReturn, setBookings, refreshBookings]
   );
 
   return <BookingContext.Provider value={value}>{children}</BookingContext.Provider>;

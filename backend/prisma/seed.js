@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+﻿import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
@@ -145,7 +145,7 @@ async function main() {
       ownerId: samira.id, // Snapshot
       startDate: new Date('2026-04-22T00:00:00Z'),
       endDate: new Date('2026-04-24T00:00:00Z'),
-      status: 'pending',
+      status: 'requested',
       totalPriceSnapshot: 5000, // 2 days * 2500
       securityDepositSnapshot: 15000,
       pickupZone: 'Arts District',
@@ -160,7 +160,7 @@ async function main() {
       ownerId: samira.id, // Snapshot
       startDate: new Date('2026-04-26T00:00:00Z'),
       endDate: new Date('2026-04-28T00:00:00Z'),
-      status: 'upcoming',
+      status: 'approved',
       totalPriceSnapshot: 5000,
       securityDepositSnapshot: 15000,
       pickupZone: 'Arts District',
@@ -233,3 +233,4 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
+

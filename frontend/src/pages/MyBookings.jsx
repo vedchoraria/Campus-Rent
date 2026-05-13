@@ -6,7 +6,7 @@ import PendingRequestCard from "../components/PendingRequestCard.jsx";
 import { BOOKING_STATUS } from "../constants/bookingStatus.js";
 import { useBookings } from "../context/BookingContext.jsx";
 
-const tabs = ["Pending", "Upcoming", "Ongoing", "History"];
+const tabs = ["Pending", "Active Rentals", "History"];
 
 
 const formatShortDate = (value) => {
@@ -58,12 +58,12 @@ const uniqueById = (items) => {
 function MyBookings() {
   const [activeTab, setActiveTab] = useState(tabs[0]);
 
-  const { bookings, cancelBooking, markReturned } = useBookings();
+  const { bookings, cancelBooking, confirmItemReceived, requestReturn } = useBookings();
   const handleComingSoon = () => {
     window.alert("Feature coming soon");
   };
 
-  const { pending, upcoming, ongoing, history } = useMemo(() => {
+  const { pending, activeRentals, history } = useMemo(() => {
     const normalized = uniqueById(bookings)
       .map((booking) => {
         const name = booking.title || "Item";
@@ -104,9 +104,10 @@ function MyBookings() {
       .filter((booking) => booking.status);
 
     return {
-      pending: normalized.filter((booking) => booking.status === BOOKING_STATUS.pending),
-      upcoming: normalized.filter((booking) => booking.status === BOOKING_STATUS.upcoming),
-      ongoing: normalized.filter((booking) => booking.status === BOOKING_STATUS.ongoing),
+      pending: normalized.filter((booking) => booking.status === BOOKING_STATUS.requested),
+      activeRentals: normalized.filter((booking) =>
+        [BOOKING_STATUS.approved, BOOKING_STATUS.itemGiven, BOOKING_STATUS.ongoing, BOOKING_STATUS.returnPending].includes(booking.status)
+      ),
       history: normalized
         .filter((booking) =>
           [BOOKING_STATUS.completed, BOOKING_STATUS.cancelled, BOOKING_STATUS.rejected].includes(
@@ -119,8 +120,7 @@ function MyBookings() {
 
   const stats = [
     { label: "Pending Requests", value: String(pending.length) },
-    { label: "Upcoming Pickups", value: String(upcoming.length) },
-    { label: "Ongoing Borrowings", value: String(ongoing.length) },
+    { label: "Active Rentals", value: String(activeRentals.length) },
     { label: "History Records", value: String(history.length) },
   ];
 
@@ -192,42 +192,58 @@ function MyBookings() {
         </div>
       )}
 
-      {activeTab === "Ongoing" && (
+      {activeTab === "Active Rentals" && (
         <div style={{ display: "grid", gap: "16px" }}>
-          {ongoing.map((rental) => (
-            <BorrowedItemCard
-              key={rental.id}
-              rental={rental}
-              onMarkReturned={async () => {
-                try {
-                  await markReturned(rental.id);
-                } catch (err) {
-                  window.alert(err.message || "Failed to mark booking as returned.");
-                }
-              }}
-              onReportIssue={handleComingSoon}
-              onChat={handleComingSoon}
-            />
-          ))}
-        </div>
-      )}
+          {activeRentals.map((rental) => {
+            if (rental.status === BOOKING_STATUS.approved) {
+              return (
+                <UpcomingRentalCard
+                  key={rental.id}
+                  rental={rental}
+                  onCancel={async () => {
+                    try {
+                      await cancelBooking(rental.id, "borrower");
+                    } catch (err) {
+                      window.alert(err.message || "Failed to cancel booking.");
+                    }
+                  }}
+                  onChat={handleComingSoon}
+                />
+              );
+            }
 
-      {activeTab === "Upcoming" && (
-        <div style={{ display: "grid", gap: "16px" }}>
-          {upcoming.map((rental) => (
-            <UpcomingRentalCard
-              key={rental.id}
-              rental={rental}
-              onCancel={async () => {
-                try {
-                  await cancelBooking(rental.id, "borrower");
-                } catch (err) {
-                  window.alert(err.message || "Failed to cancel booking.");
-                }
-              }}
-              onChat={handleComingSoon}
-            />
-          ))}
+            const isItemGiven = rental.status === BOOKING_STATUS.itemGiven;
+            const isOngoing = rental.status === BOOKING_STATUS.ongoing;
+            const isReturnPending = rental.status === BOOKING_STATUS.returnPending;
+            const primaryActionLabel = isItemGiven
+              ? "Confirm Item Received"
+              : isOngoing
+                ? "Request Return"
+                : "Return Requested";
+
+            return (
+              <BorrowedItemCard
+                key={rental.id}
+                rental={rental}
+                primaryActionLabel={primaryActionLabel}
+                primaryActionDisabled={isReturnPending}
+                lifecycleNote={isReturnPending ? "Waiting for owner to confirm return." : ""}
+                onPrimaryAction={async () => {
+                  try {
+                    if (isItemGiven) {
+                      await confirmItemReceived(rental.id);
+                    } else if (isOngoing) {
+                      await requestReturn(rental.id);
+                    }
+                  } catch (err) {
+                    window.alert(err.message || "Failed to update booking status.");
+                  }
+                }}
+                onReportIssue={handleComingSoon}
+                onChat={handleComingSoon}
+              />
+            );
+          })}
         </div>
       )}
 

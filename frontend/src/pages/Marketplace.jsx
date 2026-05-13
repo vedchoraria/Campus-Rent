@@ -43,7 +43,9 @@ function Marketplace() {
 
   const filteredAndSortedListings = useMemo(() => {
     const ongoingByItemId = bookings
-      .filter((booking) => booking.status === BOOKING_STATUS.ongoing)
+      .filter((booking) =>
+        [BOOKING_STATUS.itemGiven, BOOKING_STATUS.ongoing, BOOKING_STATUS.returnPending].includes(booking.status)
+      )
       .reduce((acc, booking) => {
         const itemId = String(booking.itemId);
         const current = acc[itemId];

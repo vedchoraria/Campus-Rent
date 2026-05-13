@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+﻿import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import BookingForm from "../components/BookingForm.jsx";
 import PriceBreakdown from "../components/PriceBreakdown.jsx";
@@ -101,7 +101,7 @@ function Booking() {
       const activeBookings = bookings.filter(
         (booking) =>
           String(booking.itemId) === String(item.id) &&
-          (booking.status === BOOKING_STATUS.upcoming || booking.status === BOOKING_STATUS.ongoing)
+          (booking.status === BOOKING_STATUS.approved || booking.status === BOOKING_STATUS.itemGiven || booking.status === BOOKING_STATUS.ongoing || booking.status === BOOKING_STATUS.returnPending)
       );
       const availability = checkAvailability(start, end, activeBookings);
       if (!availability.isAvailable) {
@@ -182,7 +182,7 @@ function Booking() {
             marginBottom: "16px",
           }}
         >
-          <span>←</span> Back
+          <span>â†</span> Back
         </button>
         <h1 style={{ fontSize: "32px", fontFamily: '"Space Grotesk", sans-serif', marginTop: "8px" }}>
           Confirm Your Reservation
@@ -225,7 +225,7 @@ function Booking() {
                 marginBottom: "16px",
               }}
             >
-              📍 {item.location}
+              ðŸ“ {item.location}
             </p>
             <div
               style={{
@@ -239,7 +239,7 @@ function Booking() {
             >
               <span style={{ fontWeight: 600 }}>Rate</span>
               <div style={{ fontSize: "18px", fontWeight: 700, color: "var(--primary)" }}>
-                ₹{item.pricePerDay} <span style={{ fontSize: "14px", color: "var(--muted)", fontWeight: 400 }}>/ day</span>
+                â‚¹{item.pricePerDay} <span style={{ fontSize: "14px", color: "var(--muted)", fontWeight: 400 }}>/ day</span>
               </div>
             </div>
           </div>
@@ -272,3 +272,4 @@ function Booking() {
 }
 
 export default Booking;
+
