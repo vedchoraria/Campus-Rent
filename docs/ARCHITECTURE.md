@@ -1,80 +1,224 @@
-# CampusRent Engineering State & Architecture
+# CampusRent — System Architecture
 
-**Document Type:** System Architecture & Migration Status  
-**Last Updated:** 2026-05-02  
-**Current Phase:** Phase 5 - API Integration & Hybrid Migration  
+This document covers the full technical architecture of CampusRent: deployment topology, request flow, booking state machine, database schema, and authentication pipeline.
 
 ---
 
-## 1. High-Level Architecture Overview
-CampusRent is actively transitioning from a client-heavy, local-storage mock application into a full-stack, enterprise-grade monolithic repository. 
-- **Frontend:** React + Vite, currently reliant on React Context (`ListingContext`, `BookingContext`) for state management and hybrid data caching.
-- **Backend:** Node.js + Express, utilizing a strict decoupled layered architecture.
-- **Database:** Neon Serverless PostgreSQL managed via Prisma ORM.
+## 1. Deployment Topology
 
-## 2. Backend Folder Architecture
-The backend enforces a strict separation of concerns to guarantee modularity and testability:
-- **`routes/`**: Handles HTTP method mapping and URL parsing.
-- **`controllers/`**: Extracts `req`/`res` objects, handles HTTP status codes, and catches errors.
-- **`services/`**: Contains core business logic, validation rules, and Prisma database queries.
-- **`utils/`**: Contains shared singletons, such as the `prismaClient` to prevent connection exhaustion.
+```mermaid
+graph TD
+    subgraph Vercel["🌐 Vercel (Frontend)"]
+        FE["React + Vite SPA"]
+    end
 
-*Why this was chosen:* This three-layer architecture ensures that business logic is decoupled from HTTP transport layers. This makes the system highly testable, easier to debug, and prepared for future scaling (e.g., swapping REST for GraphQL or moving to microservices).
+    subgraph Render["⚙️ Render (Backend)"]
+        API["Express.js API Server"]
+        MW["JWT Middleware\nRole Validation · Guard Checks"]
+        PRM["Prisma ORM Client"]
+        API --> MW --> PRM
+    end
 
-## 3. Prisma + Neon Integration
-The platform uses Neon Serverless PostgreSQL for scalable, instantly available database connections. Prisma ORM is used for schema management, migrations, and type-safe database queries.
-- **Connection Pooling:** Prisma connects to Neon using connection pooling to handle serverless cold starts efficiently.
-- **Indexes:** B-Tree indexes are explicitly defined on high-traffic foreign keys (`ownerId`, `listingId`, `status`) to prevent sequential scans during Marketplace filtering and Dashboard aggregation.
+    subgraph Neon["🗄️ Neon (PostgreSQL)"]
+        DB[("PostgreSQL\nUser · Listing · Booking")]
+    end
 
-## 4. Current Relational Schema Overview
-The database schema revolves around four core models with strict referential integrity:
-- **`User`**: The foundational model. Contains roles (borrower vs lender is implicit via relations).
-- **`Listing`**: Relates to `User` (owner). Enforces a strict `ListingStatus` enum (`active`, `hidden`, `deleted`).
-- **`ListingImage`**: One-to-many from `Listing`, ordered via `displayOrder`.
-- **`Booking`**: The central junction table. Requires strict relations to both `Listing` and `User` (borrower). 
+    FE -->|"HTTPS · JWT Bearer"| API
+    PRM -->|"Connection Pool · SSL"| DB
+```
 
-*Why this was chosen:* We introduced historical snapshots (`totalPriceSnapshot`, `securityDepositSnapshot`) and `ownerId` directly onto the `Booking` table. This ensures financial auditability—if an owner changes a listing's daily rate tomorrow, existing historical bookings remain financially accurate.
+---
 
-## 5. API Architecture Overview
-The API is currently RESTful and stateless.
-- **Implemented Endpoints:**
-  - `GET /api/listings`: Fetches all active listings with owner metadata and images.
-  - `GET /api/listings/:id`: Fetches a single listing with owner metadata, ordered images, and active bookings for overlap calculation.
-- **Aborted/Reconsidered Endpoints:**
-  - `POST /api/bookings`: Temporarily rejected pending a pivot toward proper Authentication.
+## 2. Frontend Request Flow
 
-## 6. Frontend/Backend Data Flow (Data Mapping Layer)
-Currently, the frontend uses an `api.js` abstraction wrapper utilizing `fetch`. The data flows through a **Translation/Mapping Layer** located directly inside the Contexts (e.g., `ListingContext`). 
+```mermaid
+graph LR
+    MP["Marketplace"] --> CTX
+    OD["Owner Dashboard"] --> CTX
+    BD["Borrower Dashboard"] --> CTX
 
-*Why this was chosen:* Instead of rewriting the entire React frontend (which relies heavily on mock keys like `pricePerDay` or `mrp`), the Context intercepts the raw Prisma JSON (e.g., `dailyRentalRate`) and maps it to the legacy shape. This ensures complex UI components like `PriceBreakdown` and `ItemCard` function perfectly without modifications.
+    subgraph CTX["React Context Layer"]
+        LC["ListingContext"]
+        BC["BookingContext"]
+    end
 
-## 7. Incremental Migration Strategy
-The project is undergoing a **Hybrid Incremental Migration**. We are replacing the data layer piece-by-piece rather than rewriting the entire application simultaneously.
+    CTX --> SVC["API Service Layer\n(token injection · error normalization)"]
+    SVC -->|"HTTPS"| API["Express.js Backend"]
+    API -->|"JSON Response"| SVC
+    SVC -->|"State Refetch"| CTX
+```
 
-*Why this was chosen:* A "Big Bang" rewrite of a complex state engine (like the booking lifecycle) is risky. By keeping the UI frozen and migrating just the data fetching mechanisms, we maintain a continuously deployable, working application. We also added graceful fallbacks where if the API fails, it seamlessly degrades to `mockData.js`.
+> The frontend never reads from local state after a mutation. Every write is followed by a backend refetch — the database is the canonical source of truth.
 
-## 8. Current Hybrid / Transitional Areas
-- **Marketplace & Item Details:** 100% Backend-driven. Data is fetched via API and mapped locally.
-- **Dashboards & Rental Lifecycle:** Currently Frontend-driven but actively transitioning. Relies on `BookingContext` and `localStorage`, causing state synchronization tension.
-- **Booking Creation & Lifecycle Mutations:** The mutation flow was recently attempted via API but rejected by engineering. The strategy shifted because mixing backend persistence with frontend-context-driven dashboards caused architectural tension. 
+---
 
-## 9. Current Risks & Unfinished Systems
-- **State Desync:** If a user opens two tabs, the localStorage-driven Dashboards might desync from the live Neon database Marketplace.
-- **Context Bloat:** The frontend `BookingContext` is becoming massive because it handles simulated backend logic (e.g., overlap detection, status transitions).
-- **Hardcoded Identifiers:** We currently lack Authentication, meaning any backend operations require seeded "mock" users to satisfy relational constraints.
+## 3. Booking Lifecycle State Machine
 
-## 10. Recommended Next Milestones
+```mermaid
+stateDiagram-v2
+    [*] --> requested : Borrower submits request
 
-Based on recent engineering decisions, the roadmap has shifted to prioritize **read stabilization** over mutations to resolve the architectural tension between local context and backend persistence. The roadmap MUST follow this strict order:
+    requested --> approved : Owner approves\n(overlap check passes)
+    requested --> rejected : Owner rejects
 
-### Milestone 1: Dashboard Read Migration (Current Priority)
-Implement `GET /api/bookings/my-requests` and `/api/listings/my-listings` (or similar query layers). This will gradually migrate booking reads to backend APIs and allow us to rip out the heavy `localStorage` logic from the Dashboards.
+    approved --> item_given : Owner confirms handoff
+    item_given --> ongoing : Borrower confirms receipt
+    ongoing --> return_pending : Borrower initiates return
+    return_pending --> completed : Owner confirms return
 
-### Milestone 2: Stabilize Dashboard Synchronization
-Ensure that all dashboard read flows securely and accurately display database state, resolving all desync issues between the Marketplace and the Dashboards.
+    requested --> cancelled : Either party cancels
+    approved --> cancelled : Either party cancels
+    item_given --> cancelled : Either party cancels
+    ongoing --> cancelled : Either party cancels
 
-### Milestone 3: Introduce Booking Mutations Cleanly
-With a stabilized read layer, safely re-introduce `POST /api/bookings` and the PUT endpoints for Approve, Reject, Cancel, and Complete actions. Moving the state transition engine entirely to the backend will no longer cause context tension since the dashboard will just refetch live data.
+    rejected --> [*]
+    completed --> [*]
+    cancelled --> [*]
+```
 
-### Milestone 4: Authentication & User Sessions
-Implement proper Authentication (JWT or Session-based). Once the lifecycle persistence flow is fully stabilized, Auth will seamlessly replace the temporary seeded user identifiers (`borrowerId`, `ownerId`) to secure the platform for production.
+### Overlap Conflict Prevention
+
+Before any `requested → approved` transition, the engine queries all bookings for the same listing in states `approved`, `item_given`, `ongoing`, or `return_pending` and validates that no date range intersection exists. The check explicitly excludes `requested`, `cancelled`, `rejected`, and `completed` to avoid blocking legitimate future bookings from other requesters.
+
+### Cancellation Audit
+
+Every cancellation stamps `cancelledBy` (owner or borrower) and `cancelledAt` (UTC timestamp) onto the booking record at persistence time. This is enforced at the API layer — the client cannot modify or omit these fields.
+
+---
+
+## 4. Role-Based Transition Guards
+
+```mermaid
+graph TD
+    ACT["Incoming PATCH /bookings/:id/status"] --> V1["Verify JWT"]
+    V1 --> V2["Extract userId + role"]
+    V2 --> V3{"Is transition\nvalid from\ncurrent status?"}
+    V3 -->|No| E1["400 Invalid Transition"]
+    V3 -->|Yes| V4{"Does user role\nmatch required\nactor?"}
+    V4 -->|No| E2["403 Forbidden"]
+    V4 -->|Yes| V5{"Overlap check\n(if approving)"}
+    V5 -->|Conflict| E3["409 Overlap Conflict"]
+    V5 -->|Clear| P["Persist transition\n+ audit metadata"]
+    P --> R["Refetch + return updated booking"]
+```
+
+| Transition | Required Actor |
+|---|---|
+| `requested → approved / rejected` | Owner |
+| `approved → item_given` | Owner |
+| `item_given → ongoing` | Borrower |
+| `ongoing → return_pending` | Borrower |
+| `return_pending → completed` | Owner |
+| `* → cancelled` | Owner or Borrower |
+
+---
+
+## 5. Authentication Flow
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant A as Express API
+    participant DB as Neon PostgreSQL
+
+    C->>A: POST /auth/login { email, password }
+    A->>DB: SELECT user WHERE email = ?
+    DB-->>A: User record (hashed password)
+    A->>A: bcrypt.compare(password, hash)
+    A->>A: jwt.sign({ userId, email, role })
+    A-->>C: { token, user }
+
+    Note over C: Stores token (memory / localStorage)
+
+    C->>A: GET /bookings/owner\nAuthorization: Bearer <token>
+    A->>A: jwt.verify(token, JWT_SECRET)
+    A->>A: Attach req.user = { userId, role }
+    A->>DB: SELECT bookings WHERE ownerId = userId
+    DB-->>A: Booking records
+    A-->>C: JSON response
+```
+
+---
+
+## 6. Database Schema
+
+```mermaid
+erDiagram
+    User {
+        String id PK
+        String email
+        String password
+        String name
+        DateTime createdAt
+    }
+
+    Listing {
+        String id PK
+        String title
+        String description
+        Float pricePerDay
+        Float securityDeposit
+        String category
+        ListingStatus status
+        String ownerId FK
+        DateTime createdAt
+    }
+
+    ListingImage {
+        String id PK
+        String url
+        String listingId FK
+    }
+
+    Booking {
+        String id PK
+        String listingId FK
+        String borrowerId FK
+        String ownerId
+        DateTime startDate
+        DateTime endDate
+        BookingStatus status
+        Float totalPriceSnapshot
+        Float securityDepositSnapshot
+        String cancelledBy
+        DateTime cancelledAt
+        DateTime createdAt
+    }
+
+    User ||--o{ Listing : "owns"
+    User ||--o{ Booking : "borrows"
+    Listing ||--o{ ListingImage : "has"
+    Listing ||--o{ Booking : "booked via"
+```
+
+### Key Design Decisions
+
+**Snapshot fields on Booking** — `totalPriceSnapshot` and `securityDepositSnapshot` are written at booking creation time from the listing's current price. If the owner later changes pricing, historical bookings retain their original cost. This is the only safe approach for financial records.
+
+**`ownerId` denormalized onto Booking** — Rather than joining through `Listing` to find the owner on every dashboard query, `ownerId` is stored directly on `Booking`. This halves the join depth for the owner's most frequent query pattern.
+
+**B-Tree indexes** on `Listing.ownerId` and `Booking.listingId` — these two fields appear in the `WHERE` clause of every high-frequency query (owner dashboard load, overlap conflict check, borrower history). Indexed at migration time.
+
+**Prisma enums for status fields** — `BookingStatus` and `ListingStatus` are defined as Prisma enums backed by PostgreSQL native enums. Invalid string states cannot reach the database at the ORM layer, before any application-level validation runs.
+
+---
+
+## 7. CORS & Environment Architecture
+
+```mermaid
+graph LR
+    subgraph Production
+        FE["Vercel Frontend\ncampus-rent-sigma.vercel.app"] -->|"Allowed origin"| BE["Render Backend"]
+        X["Any other origin"] -->|"Blocked"| BE
+    end
+
+    subgraph Development
+        LOCAL["localhost:5173"] -->|"Allowed origin\n(dev only)"| DEV["localhost:4000"]
+    end
+
+    BE --> ENV{"NODE_ENV"}
+    ENV -->|"production"| PROD_CORS["FRONTEND_URL allowlist\nNo localhost fallback"]
+    ENV -->|"development"| DEV_CORS["localhost:5173 permitted"]
+```
+
+The backend reads `FRONTEND_URL` from environment at startup and constructs its CORS allowlist from that value alone. There is no hardcoded localhost fallback that could leak into the production environment — the configuration module enforces this at load time and throws if `NODE_ENV=production` and `FRONTEND_URL` is absent.

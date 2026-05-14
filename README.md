@@ -15,7 +15,7 @@
 **A production-deployed, full-stack peer-to-peer campus rental platform.**  
 Built on a lifecycle-driven booking engine, JWT-protected APIs, and a database-first synchronization architecture.
 
-[**Live Demo →**](https://campus-rent-sigma.vercel.app) · [**Backend Health →**](https://campus-rent-m98g.onrender.com/health)
+[**Live Demo →**](https://campus-rent-sigma.vercel.app) [**Backend Health →**](https://campus-rent-m98g.onrender.com/health)
 
 </div>
 
@@ -120,60 +120,58 @@ CampusRent solves this by providing:
 
 ## 5. System Architecture
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        CLIENT (Vercel)                      │
-│                                                             │
-│   ┌────────────┐  ┌────────────────┐  ┌─────────────────┐  │
-│   │ Marketplace│  │ Owner Dashboard│  │Borrower Dashboard│  │
-│   └─────┬──────┘  └───────┬────────┘  └────────┬────────┘  │
-│         │                 │                     │           │
-│   ┌─────▼─────────────────▼─────────────────────▼────────┐  │
-│   │               React Context Layer                     │  │
-│   │         ListingContext │ BookingContext                │  │
-│   └─────────────────────────────────────┬─────────────────┘  │
-│                                         │ API Service Layer   │
-└─────────────────────────────────────────┼────────────────────┘
-                                          │ HTTPS (JWT Bearer)
-┌─────────────────────────────────────────▼────────────────────┐
-│                      BACKEND (Render)                        │
-│                                                              │
-│   ┌──────────────────────────────────────────────────────┐   │
-│   │                  Express.js API Server                │   │
-│   │                                                      │   │
-│   │  ┌─────────────┐  ┌───────────────┐  ┌───────────┐  │   │
-│   │  │ Auth Routes │  │Listing Routes │  │Booking    │  │   │
-│   │  │ /auth/*     │  │/listings/*    │  │Routes     │  │   │
-│   │  └──────┬──────┘  └───────┬───────┘  │/bookings/*│  │   │
-│   │         │                 │          └─────┬─────┘  │   │
-│   │  ┌──────▼─────────────────▼────────────────▼──────┐  │   │
-│   │  │              JWT Middleware                     │  │   │
-│   │  │         Role Validation │ Guard Checks          │  │   │
-│   │  └─────────────────────────────────────────────────┘  │   │
-│   │                                                      │   │
-│   │  ┌──────────────────────────────────────────────────┐│   │
-│   │  │                 Prisma ORM Client                ││   │
-│   │  └──────────────────────────────────────────────────┘│   │
-│   └──────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────┬────────────────────┘
-                                          │
-┌─────────────────────────────────────────▼────────────────────┐
-│                    DATABASE (Neon PostgreSQL)                 │
-│                                                              │
-│   User ─── Listing ─── ListingImage                         │
-│               │                                              │
-│           Booking (with snapshot fields + status enum)       │
-│                                                              │
-│   B-Tree indexes: ownerId, listingId                        │
-└──────────────────────────────────────────────────────────────┘
+> For complete architecture documentation including the full booking state machine, auth sequence diagram, ER schema, and CORS flow — see [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md).
+
+### Deployment Topology
+
+```mermaid
+graph TD
+    subgraph Vercel["🌐 Vercel (Frontend)"]
+        FE["React + Vite SPA"]
+    end
+
+    subgraph Render["⚙️ Render (Backend)"]
+        API["Express.js API Server"]
+        MW["JWT Middleware · Role Validation · Guard Checks"]
+        PRM["Prisma ORM Client"]
+        API --> MW --> PRM
+    end
+
+    subgraph Neon["🗄️ Neon (PostgreSQL)"]
+        DB[("PostgreSQL · User · Listing · Booking")]
+    end
+
+    FE -->|"HTTPS · JWT Bearer"| API
+    PRM -->|"Connection Pool · SSL"| DB
 ```
 
-**Key architectural decisions:**
+### Frontend Request Flow
 
-- **Database as source of truth.** No booking mutation is committed until it is persisted in Neon and refetched. The frontend never reads from its own local state after a mutation.
-- **Decoupled layers.** The `frontend/` and `backend/` directories are fully independent deployable units with no shared modules or tight coupling.
-- **API service abstraction.** All frontend API calls route through a centralized service layer that handles auth token injection, error normalization, and base URL resolution.
-- **Context as projection layer.** React contexts (`ListingContext`, `BookingContext`) are view-layer projections of backend state, not independent state stores.
+```mermaid
+graph LR
+    MP["Marketplace"] --> CTX
+    OD["Owner Dashboard"] --> CTX
+    BD["Borrower Dashboard"] --> CTX
+
+    subgraph CTX["React Context Layer"]
+        LC["ListingContext"]
+        BC["BookingContext"]
+    end
+
+    CTX --> SVC["API Service Layer"]
+    SVC -->|"HTTPS"| API["Express.js Backend"]
+    API -->|"JSON Response"| SVC
+    SVC -->|"State Refetch"| CTX
+```
+
+**The frontend never reads from local state after a mutation.** Every write is followed by a backend refetch — the database is the canonical source of truth.
+
+### Key Architectural Decisions
+
+- **Database as source of truth** — No booking mutation is committed until persisted in Neon and refetched. The frontend never reads from its own local state after a mutation.
+- **Decoupled layers** — `frontend/` and `backend/` are fully independent deployable units with no shared modules.
+- **API service abstraction** — All frontend API calls route through a centralized service layer handling auth token injection, error normalization, and base URL resolution.
+- **Context as projection layer** — React contexts are view-layer projections of backend state, not independent state stores.
 
 ---
 
@@ -669,4 +667,3 @@ Vercel will auto-deploy on every push to `main`. Preview deployments are generat
 
 This project is licensed under the [MIT License](./LICENSE).
 
-```
