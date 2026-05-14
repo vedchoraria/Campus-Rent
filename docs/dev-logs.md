@@ -66,16 +66,128 @@
 - Prepared backend migration surface through stable context contracts and API service abstraction.
 - Completed Supabase preparation groundwork without introducing backend-dependent runtime paths.
 
-### Phase 5.0 - Backend Architecture & Database Initialization
-- Restructured project into decoupled rontend/ and ackend/ directories.
-- Initialized Node.js/Express backend on port 5000 with CORS and JSON middleware.
-- Set up Prisma ORM and connected to Neon serverless PostgreSQL database.
-- Finalized strict relational database schema including User, Listing, ListingImage, and Booking models.
-- Migrated from generic string states to strict database Enums (BookingStatus, ListingStatus).
-- Implemented historical data integrity by adding 	otalPriceSnapshot, securityDepositSnapshot, and ownerId directly to the Booking table.
-- Added highly practical, production-ready B-Tree indexes on foreign keys (ownerId, listingId) to prevent sequential scans on dashboards and marketplace filters.
-- Created idempotent seed.js script that successfully populated the Neon database with the frontend's mock profile and listing data.
+## Phase 5 - Full-Stack Backend Integration, Lifecycle Architecture & Production Deployment
 
-## Current Phase - API Route Implementation
-- Database is fully provisioned and seeded.
-- Next step is to replace frontend static imports with Express /api/* route connections.
+### Phase 5.0 - Backend Architecture & Database Initialization
+
+- Restructured the project into decoupled `frontend/` and `backend/` application layers.
+- Initialized Node.js + Express backend infrastructure with JSON middleware and environment-aware CORS handling.
+- Integrated Prisma ORM with Neon serverless PostgreSQL as the primary production database.
+- Designed and finalized a strict relational schema covering:
+  - `User`
+  - `Listing`
+  - `ListingImage`
+  - `Booking`
+- Migrated from loosely typed string states into strict Prisma-backed enums:
+  - `BookingStatus`
+  - `ListingStatus`
+- Added historical booking integrity fields directly into the `Booking` model:
+  - `totalPriceSnapshot`
+  - `securityDepositSnapshot`
+  - `ownerId`
+- Added optimized B-Tree indexing on high-frequency relational queries (`ownerId`, `listingId`) to improve dashboard and marketplace scalability.
+- Created an idempotent `seed.js` pipeline to populate Neon with realistic frontend-compatible seed data.
+
+---
+
+### Phase 5.1 - API Integration & Frontend-Backend Synchronization
+
+- Replaced frontend mock/static state flows with real Express API integration.
+- Introduced a centralized API service abstraction layer for authenticated and unauthenticated requests.
+- Implemented JWT-based authentication with persistent login/session handling.
+- Connected React contexts and dashboard modules directly to Neon-backed API endpoints.
+- Eliminated local-only booking mutations and transitioned to database-first persistence architecture.
+- Added token-aware protected route middleware across backend APIs.
+- Stabilized cross-dashboard synchronization behavior after refreshes and lifecycle mutations.
+
+---
+
+### Phase 5.2 - Booking Lifecycle Refactor & State Machine Hardening
+
+- Replaced simplified booking states (`pending`, `upcoming`, `ongoing`) with a production-style lifecycle engine:
+  - `requested`
+  - `approved`
+  - `item_given`
+  - `ongoing`
+  - `return_pending`
+  - `completed`
+  - `cancelled`
+  - `rejected`
+- Introduced guarded lifecycle transitions with strict role-based permissions:
+  - Owners manage approvals, handoff, rejection, and return confirmation.
+  - Borrowers confirm receipt and initiate return requests.
+- Added backend-enforced invalid transition prevention and state validation.
+- Refactored borrower and owner dashboards around lifecycle-aware grouping and workflow presentation.
+- Extended overlap conflict prevention across all active rental states.
+- Migrated legacy booking records safely using Prisma migration workflows.
+
+---
+
+### Phase 5.3 - Persistence Stabilization & Reload Consistency Engineering
+
+- Identified and resolved booking reset issues caused by frontend-only state mutations.
+- Added dedicated backend `PATCH` lifecycle update endpoints for booking state transitions.
+- Refactored booking mutations into API-first persistence flows followed by database refetch synchronization.
+- Established the database as the canonical source of truth for booking state.
+- Fixed reload inconsistencies where approved bookings reverted to pending state.
+- Preserved synchronization consistency across borrower and lender dashboards after refresh cycles.
+
+---
+
+### Phase 5.4 - Production Infrastructure, Environment Hardening & Deployment
+
+- Implemented production-safe CORS architecture with environment-driven frontend allowlists.
+- Added strict frontend API environment validation to eliminate unsafe localhost fallbacks.
+- Centralized backend deployment configuration handling through scalable config modules.
+- Migrated frontend linting infrastructure to ESLint v9 flat configuration architecture.
+- Added automated Prisma client generation through deployment-safe `postinstall` hooks.
+- Verified backend compatibility with Render deployment infrastructure.
+- Verified frontend compatibility with Vercel deployment infrastructure.
+- Successfully deployed production stack:
+  - Frontend → Vercel
+  - Backend → Render
+  - Database → Neon PostgreSQL
+- Completed end-to-end production validation for:
+  - JWT authentication
+  - Protected APIs
+  - Listing services
+  - Booking lifecycle workflows
+  - Prisma synchronization
+  - Environment variable handling
+  - Cross-origin communication
+
+---
+
+## Current Product State
+
+CampusRent now operates as a fully deployed full-stack campus rental platform featuring:
+
+- React + Vite frontend architecture
+- Express.js backend services
+- Prisma ORM data layer
+- Neon PostgreSQL production database
+- JWT authentication system
+- Lifecycle-driven booking engine
+- Role-based booking workflows
+- Persistent database-backed synchronization
+- Production deployment infrastructure
+- Real-world environment and deployment management
+
+---
+
+## Upcoming Product Directions
+
+Planned future enhancements include:
+
+- Marketplace sorting enhancements:
+  - Price low-to-high
+  - Price high-to-low
+  - Newest-first
+- Footer and navigation system refinement
+- Mobile responsiveness and UX polish
+- Payment integration workflows
+- Extend-rental-duration functionality
+- Quick-view modal experience
+- Community donation inventory model:
+  - Users may donate items into CampusRent inventory.
+  - Donors retain lifetime revenue-sharing rights on future rentals generated from donated assets.
