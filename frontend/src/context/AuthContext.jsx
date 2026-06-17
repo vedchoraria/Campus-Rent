@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { setOnAuthError } from "../services/api.js";
 
 const AuthContext = createContext(null);
 const USER_KEY = "campusRent_user";
@@ -11,6 +12,22 @@ export const AuthProvider = ({ children }) => {
   });
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY));
 
+  const logout = useCallback(() => {
+    localStorage.removeItem(USER_KEY);
+    localStorage.removeItem(TOKEN_KEY);
+    setUser(null);
+    setToken(null);
+  }, []);
+
+  // Register the global auth-error handler on mount
+  useEffect(() => {
+    setOnAuthError(() => {
+      logout();
+      window.location.href = '/login';
+    });
+    return () => setOnAuthError(null);
+  }, [logout]);
+
   const login = (authData) => {
     const userData = authData?.user;
     const jwt = authData?.token;
@@ -21,13 +38,6 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem(TOKEN_KEY, jwt);
     setUser(userData);
     setToken(jwt);
-  };
-
-  const logout = () => {
-    localStorage.removeItem(USER_KEY);
-    localStorage.removeItem(TOKEN_KEY);
-    setUser(null);
-    setToken(null);
   };
 
   return (

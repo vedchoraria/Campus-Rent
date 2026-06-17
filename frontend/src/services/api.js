@@ -20,6 +20,17 @@ const resolveApiBaseUrl = () => {
 const API_BASE_URL = resolveApiBaseUrl();
 const AUTH_TOKEN_KEY = "campusRent_token";
 
+/** @type {(() => void) | null} */
+let _onAuthError = null;
+
+/**
+ * Register a callback to be invoked when the API detects an auth failure (401).
+ * Intended for AuthContext to wire up auto-logout on token expiry.
+ */
+export const setOnAuthError = (callback) => {
+  _onAuthError = typeof callback === 'function' ? callback : null;
+};
+
 const parseApiError = async (response) => {
   let message = `API Error: ${response.statusText}`;
   try {
@@ -30,6 +41,11 @@ const parseApiError = async (response) => {
   } catch {
     // Ignore JSON parsing errors and keep status text fallback
   }
+
+  if (response.status === 401 && _onAuthError) {
+    _onAuthError();
+  }
+
   const error = new Error(message);
   error.status = response.status;
   return error;
@@ -85,8 +101,14 @@ export const api = {
   },
 
   // Dedicated API helpers
-  getListings: async (signal) => {
-    return api.get("/listings", signal);
+  getListings: async (params = {}, signal) => {
+    const query = new URLSearchParams();
+    if (params.q) query.set('q', params.q);
+    if (params.category) query.set('category', params.category);
+    if (params.page) query.set('page', String(params.page));
+    if (params.limit) query.set('limit', String(params.limit));
+    const qs = query.toString();
+    return api.get(`/listings${qs ? `?${qs}` : ''}`, signal);
   },
 
   getListingById: async (id, signal) => {
@@ -99,6 +121,10 @@ export const api = {
 
   createListing: async (payload) => {
     return api.post("/listings", payload);
+  },
+
+  updateListing: async (id, payload) => {
+    return api.patch(`/listings/${id}`, payload);
   },
 
   uploadListingImage: async (file) => {

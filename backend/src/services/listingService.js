@@ -8,49 +8,80 @@ class ListingError extends Error {
   }
 }
 
+const LISTING_INCLUDE = {
+  images: {
+    orderBy: { displayOrder: 'asc' },
+    select: { imageUrl: true, displayOrder: true }
+  },
+  owner: {
+    select: {
+      id: true,
+      fullName: true,
+      profileImage: true,
+      department: true,
+      lenderRating: true
+    }
+  }
+};
+
 /**
- * Retrieves all active listings from the database.
- * Uses relation queries to include owner metadata and ordered images.
+ * Retrieves active listings with optional search, category filter, and pagination.
+ * Uses case-insensitive matching across title, description, and category.
  */
-export const getActiveListings = async () => {
-  // The 'findMany' query hits the database.
+export const getActiveListings = async (filters = {}) => {
+  const { q, category, page, limit } = filters;
+
+  const where = { status: 'active' };
+
+  if (q) {
+    where.OR = [
+      { title: { contains: q, mode: 'insensitive' } },
+      { description: { contains: q, mode: 'insensitive' } },
+      { category: { contains: q, mode: 'insensitive' } }
+    ];
+  }
+
+  if (category) {
+    where.category = { equals: category, mode: 'insensitive' };
+  }
+
+  const hasPagination = page !== undefined && page !== null &&
+                        limit !== undefined && limit !== null;
+
+  if (hasPagination) {
+    const pageNum = Math.max(1, Number(page));
+    const limitNum = Math.min(100, Math.max(1, Number(limit)));
+    const skip = (pageNum - 1) * limitNum;
+
+    const [listings, total] = await Promise.all([
+      prisma.listing.findMany({
+        where,
+        include: LISTING_INCLUDE,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limitNum
+      }),
+      prisma.listing.count({ where })
+    ]);
+
+    return {
+      data: listings,
+      pagination: {
+        total,
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.ceil(total / limitNum)
+      }
+    };
+  }
+
   const listings = await prisma.listing.findMany({
-    // Only return items where status is 'active' (enum)
-    where: {
-      status: 'active',
-    },
-    // The 'include' clause fetches related data from other tables
-    include: {
-      // Include the images relation, ordered by displayOrder
-      images: {
-        orderBy: {
-          displayOrder: 'asc',
-        },
-        // We use 'select' inside include to return ONLY specific columns
-        select: {
-          imageUrl: true,
-          displayOrder: true,
-        },
-      },
-      // Include the owner relation, but restrict the fields!
-      // This is critical for security: we do NOT want to send 'collegeEmail' to the frontend.
-      owner: {
-        select: {
-          id: true,
-          fullName: true,
-          profileImage: true,
-          department: true,
-          lenderRating: true,
-        },
-      },
-    },
-    // Sort newest listings first
-    orderBy: {
-      createdAt: 'desc',
-    },
+    where,
+    include: LISTING_INCLUDE,
+    orderBy: { createdAt: 'desc' }
   });
 
-  return listings;
+  return { data: listings };
 };
 
 /**
@@ -175,6 +206,66 @@ export const createListing = async (ownerId, payload) => {
   });
 
   return listing;
+};
+
+/**
+ * Update a listing. Only the owner can update.
+ * Accepts partial updates — only provided fields are changed.
+ * If images are provided, existing images are replaced.
+ */
+export const updateListing = async (listingId, ownerId, payload) => {
+  const listing = await prisma.listing.findUnique({
+    where: { id: String(listingId) },
+    select: { id: true, ownerId: true, status: true }
+  });
+
+  if (!listing || listing.status === 'deleted') {
+    throw new ListingError('Listing not found.', 404);
+  }
+
+  if (listing.ownerId !== String(ownerId)) {
+    throw new ListingError('You are not allowed to edit this listing.', 403);
+  }
+
+  const updateData = {};
+
+  if (payload.title !== undefined) updateData.title = payload.title;
+  if (payload.description !== undefined) updateData.description = payload.description;
+  if (payload.category !== undefined) updateData.category = payload.category;
+  if (payload.condition !== undefined) updateData.condition = payload.condition;
+  if (payload.dailyRentalRate !== undefined) updateData.dailyRentalRate = payload.dailyRentalRate;
+  if (payload.securityDeposit !== undefined) updateData.securityDeposit = payload.securityDeposit;
+  if (payload.retailPrice !== undefined) updateData.retailPrice = payload.retailPrice;
+  if (payload.minimumRentalDays !== undefined) updateData.minimumRentalDays = payload.minimumRentalDays;
+  if (payload.preferredPickupZone !== undefined) updateData.preferredPickupZone = payload.preferredPickupZone;
+  if (payload.customPickupNote !== undefined) updateData.customPickupNote = payload.customPickupNote;
+  if (payload.status !== undefined) updateData.status = payload.status;
+
+  const imagesPayload = payload.images;
+
+  if (imagesPayload !== undefined) {
+    await prisma.listingImage.deleteMany({ where: { listingId: listing.id } });
+  }
+
+  const updatedListing = await prisma.listing.update({
+    where: { id: listing.id },
+    data: {
+      ...updateData,
+      ...(imagesPayload !== undefined
+        ? {
+            images: {
+              create: imagesPayload.map((img, index) => ({
+                imageUrl: img.imageUrl,
+                displayOrder: typeof img.displayOrder === 'number' ? img.displayOrder : index
+              }))
+            }
+          }
+        : {})
+    },
+    include: LISTING_INCLUDE
+  });
+
+  return updatedListing;
 };
 
 export const deleteListing = async (listingId, ownerId) => {

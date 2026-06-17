@@ -1,8 +1,18 @@
 import * as authService from '../services/authService.js';
+import { signupSchema, loginSchema, validate } from '../utils/validation.js';
 
 export const signup = async (req, res) => {
   try {
-    const data = await authService.signup(req.body || {});
+    const validation = validate(signupSchema, req.body || {});
+    if (!validation.success) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed.',
+        errors: validation.errors
+      });
+    }
+
+    const data = await authService.signup(validation.data);
     res.status(201).json({
       success: true,
       data
@@ -19,7 +29,16 @@ export const signup = async (req, res) => {
 
 export const login = async (req, res) => {
   try {
-    const data = await authService.login(req.body || {});
+    const validation = validate(loginSchema, req.body || {});
+    if (!validation.success) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed.',
+        errors: validation.errors
+      });
+    }
+
+    const data = await authService.login(validation.data);
     res.status(200).json({
       success: true,
       data

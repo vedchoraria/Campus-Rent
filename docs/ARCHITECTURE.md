@@ -222,3 +222,79 @@ graph LR
 ```
 
 The backend reads `FRONTEND_URL` from environment at startup and constructs its CORS allowlist from that value alone. There is no hardcoded localhost fallback that could leak into the production environment — the configuration module enforces this at load time and throws if `NODE_ENV=production` and `FRONTEND_URL` is absent.
+
+---
+
+## 8. Technical Debt Register
+
+This section tracks known architectural limitations, their impact, and the production-scale solution for each.
+
+---
+
+### 8.1. Client-Side Sort and Location Filter Operate on Paginated Results
+
+**Summary:**  
+The Marketplace page applies sorting (Newest, Price, Rating) and location filtering entirely on the client side. Because the backend returns only the current page (default 8 items), these operations run against the paginated subset rather than the full result set.
+
+**Impact:**  
+- Sorting by "Price: Low to High" shows the cheapest 8 items on the current page, not the 8 cheapest items overall.
+- Filtering by location only checks the 8 items on the current page — matching items on other pages are never surfaced.
+- Search and category filter are unaffected because they execute server-side, before pagination.
+
+**Root Cause:**  
+The `GET /api/listings` endpoint accepts `q` (text search), `category`, `page`, and `limit` query parameters. It does not support `sort` or `location` parameters. Sort and location were kept client-side to avoid overcomplicating the initial pagination migration, but the introduction of pagination made client-side post-processing incorrect for these two operations.
+
+**Production-Scale Solution:**  
+Add server-side sort and location filter support to `GET /api/listings` by accepting `sort` and `location` query parameters and handling them in the Prisma query before pagination:
+
+```javascript
+// Example implementation in listingService.js getActiveListings()
+
+if (sort) {
+  switch (sort) {
+    case 'price_asc':
+      orderBy.dailyRentalRate = 'asc';
+      break;
+    case 'price_desc':
+      orderBy.dailyRentalRate = 'desc';
+      break;
+    case 'rating':
+      orderBy.owner = { lenderRating: 'desc' };
+      break;
+    case 'newest':
+    default:
+      orderBy.createdAt = 'desc';
+  }
+}
+
+if (location) {
+  where.preferredPickupZone = { contains: location, mode: 'insensitive' };
+}
+```
+
+This ensures that sort and location filter are applied to the **entire** result set before the `skip`/`take` pagination window, giving correct results regardless of page number.
+
+**Migration Path:**  
+1. Add `sort` and `location` to the list of accepted query params in the controller.
+2. Map the frontend's `sortOption` values to backend sort keys.
+3. Move the location filter from the `displayListings` useMemo into the API request params.
+4. Remove the client-side sort and location filter from `Marketplace.jsx`.
+5. Verify correctness by asserting that page 1 sorted by price_asc contains the globally cheapest items.
+
+**Status:**  `Unresolved — tracked as technical debt`
+
+---
+
+### 8.2. Pagination Does Not Preserve Filters Across Page Navigation
+
+**Summary:**  
+When a user is on the Marketplace, applies filters, and navigates to page 2, the search/filter state is held in React component state and lost if the component unmounts (e.g., navigating to a listing detail and back).
+
+**Impact:**  
+- Users may need to re-apply filters when returning to the marketplace.
+- No URL-based state serialization means bookmarking a filtered search is impossible.
+
+**Production-Scale Solution:**  
+Use URL search params (`/marketplace?q=camera&category=Tech&page=2&sort=price_asc`) as the canonical filter state source. React Router's `useSearchParams` can synchronize filter state with the URL, making it bookmarkable and resilient to navigation.
+
+**Status:**  `Unresolved — tracked as technical debt`

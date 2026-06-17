@@ -1,4 +1,5 @@
 import * as bookingService from '../services/bookingService.js';
+import { createBookingSchema, validate } from '../utils/validation.js';
 
 export const getMyBookings = async (req, res) => {
   try {
@@ -21,8 +22,17 @@ export const getMyBookings = async (req, res) => {
 
 export const createBooking = async (req, res) => {
   try {
+    const validation = validate(createBookingSchema, req.body || {});
+    if (!validation.success) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed.',
+        errors: validation.errors
+      });
+    }
+
     const borrowerId = req.user.id;
-    const payload = { ...req.body, borrowerId };
+    const payload = { ...validation.data, borrowerId };
 
     const booking = await bookingService.createBooking(payload);
 

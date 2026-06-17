@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 
 const categories = [
   { name: "All", count: 45 },
@@ -16,6 +16,8 @@ const locations = [
   "Arts District",
 ];
 
+const PAGE_SIZE = 8;
+
 import { useListings } from "../context/ListingContext.jsx";
 import ItemCard from "../components/ItemCard.jsx";
 import { useBookings } from "../context/BookingContext.jsx";
@@ -27,9 +29,14 @@ function Marketplace() {
   const [activeCategory, setActiveCategory] = useState("All");
   const [activeLocation, setActiveLocation] = useState("All Locations");
   const [sortOption, setSortOption] = useState("Newest");
+  const [page, setPage] = useState(1);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const { marketplaceListings, isLoading, error } = useListings();
+
+  const { marketplaceListings, isLoading, error, pagination, refreshListings } = useListings();
   const { bookings } = useBookings();
+
+  // Ref to skip the initial effect call since ListingContext already fetches on mount
+  const initialFetchDone = useRef(false);
 
   // Debounce search input
   useEffect(() => {
@@ -39,9 +46,32 @@ function Marketplace() {
     return () => clearTimeout(handler);
   }, [searchQuery]);
 
-  // Simulate initial realistic loading state removed
+  // When search, category, location, or page changes, re-fetch from backend with params
+  // Skip the first call because ListingContext already fetches on mount
+  useEffect(() => {
+    if (!initialFetchDone.current) {
+      initialFetchDone.current = true;
+      return;
+    }
 
-  const filteredAndSortedListings = useMemo(() => {
+    const controller = new AbortController();
+    const params = {};
+    if (debouncedSearch) params.q = debouncedSearch;
+    if (activeCategory !== "All") params.category = activeCategory;
+    params.page = page;
+    params.limit = PAGE_SIZE;
+
+    refreshListings(controller.signal, params);
+    return () => controller.abort();
+  }, [debouncedSearch, activeCategory, page, refreshListings]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, activeCategory]);
+
+  // Apply ongoing booking overlays and client-side sort/location filter
+  const displayListings = useMemo(() => {
     const ongoingByItemId = bookings
       .filter((booking) =>
         [BOOKING_STATUS.itemGiven, BOOKING_STATUS.ongoing, BOOKING_STATUS.returnPending].includes(booking.status)
@@ -57,27 +87,12 @@ function Marketplace() {
 
     let result = marketplaceListings.filter(item => !item.isHidden);
 
-    // Search filter
-    if (debouncedSearch) {
-      const lowerSearch = debouncedSearch.toLowerCase();
-      result = result.filter(
-        (item) =>
-          item.title.toLowerCase().includes(lowerSearch) ||
-          item.category.toLowerCase().includes(lowerSearch)
-      );
-    }
-
-    // Category filter
-    if (activeCategory !== "All") {
-      result = result.filter((item) => item.category === activeCategory);
-    }
-
-    // Location filter
+    // Location filter (client-side since location isn't a backend search param yet)
     if (activeLocation !== "All Locations") {
       result = result.filter((item) => item.location === activeLocation);
     }
 
-    // Sort
+    // Sort (client-side)
     result.sort((a, b) => {
       if (sortOption === "Newest") {
         return new Date(b.dateAdded) - new Date(a.dateAdded);
@@ -93,11 +108,13 @@ function Marketplace() {
       ...item,
       rentedUntil: ongoingByItemId[String(item.id)]?.end || null,
     }));
-  }, [debouncedSearch, activeCategory, activeLocation, sortOption, bookings, marketplaceListings]);
+  }, [activeLocation, sortOption, bookings, marketplaceListings]);
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
+
+  const totalPages = pagination?.totalPages || 1;
 
   return (
     <section className="marketplace-container page">
@@ -219,8 +236,8 @@ function Marketplace() {
                     </div>
                   </div>
                 ))
-              : filteredAndSortedListings.length > 0 ? (
-                  filteredAndSortedListings.map((item) => (
+              : displayListings.length > 0 ? (
+                  displayListings.map((item) => (
                     <ItemCard key={item.id} item={item} />
                   ))
                 ) : (
@@ -230,6 +247,31 @@ function Marketplace() {
                   </div>
                 )}
           </div>
+
+          {/* Pagination Controls */}
+          {pagination && totalPages > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', padding: '24px 0' }}>
+              <button
+                className="btn outline"
+                style={{ padding: '8px 16px', fontSize: '14px' }}
+                disabled={page <= 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+              >
+                ← Previous
+              </button>
+              <span style={{ fontSize: '14px', color: 'var(--muted)' }}>
+                Page {pagination.page} of {totalPages}
+              </span>
+              <button
+                className="btn outline"
+                style={{ padding: '8px 16px', fontSize: '14px' }}
+                disabled={page >= totalPages}
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              >
+                Next →
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </section>

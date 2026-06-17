@@ -98,6 +98,10 @@ export const createBooking = async (payload) => {
     throw new BookingError('Listing not found.', 404);
   }
 
+  if (listing.ownerId === String(borrowerId)) {
+    throw new BookingError('You cannot book your own listing.', 400);
+  }
+
   const overlap = await prisma.booking.findFirst({
     where: {
       listingId: listing.id,

@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import ListingCard from "../components/ListingCard.jsx";
 import ApprovalCard from "../components/ApprovalCard.jsx";
 import RentalHistoryCard from "../components/RentalHistoryCard.jsx";
@@ -31,6 +32,7 @@ const uniqueById = (items) => {
 };
 
 function MyListings() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(tabs[0]);
   const { myListings, toggleHidden, deleteListing } = useListings();
   const { bookings, approveBooking, rejectBooking, cancelBooking, markItemGiven, confirmReturn } = useBookings();
@@ -137,7 +139,7 @@ function MyListings() {
   }, [bookings, myListings]);
 
   const handleEditListing = (item) => {
-    window.alert(`Edit listing: ${item.name}`);
+    navigate(`/add?edit=${item.id}`);
   };
 
   const handleToggleHidden = (item) => {
@@ -189,7 +191,7 @@ function MyListings() {
 
   const handleCancelUpcoming = async (bookingId) => {
     try {
-      await cancelBooking(bookingId, "lender");
+      await cancelBooking(bookingId);
     } catch (err) {
       window.alert(err.message || "Failed to cancel booking.");
     }

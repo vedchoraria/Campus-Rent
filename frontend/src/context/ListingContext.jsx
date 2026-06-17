@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useCallback, useContext, useState, useEffect, useRef } from "react";
 import { api } from "../services/api.js";
 import { useAuth } from "./AuthContext.jsx";
 
@@ -10,6 +10,9 @@ export function ListingProvider({ children }) {
   const [myListings, setMyListings] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [pagination, setPagination] = useState(null);
+  // Track current search/filter params so refreshListings can reuse them
+  const searchParamsRef = useRef({});
 
   const mapListing = (item) => ({
     id: item.id,
@@ -31,15 +34,24 @@ export function ListingProvider({ children }) {
     isHidden: item.status !== 'active'
   });
 
-  const refreshListings = async (signal) => {
+  const refreshListings = useCallback(async (signal, searchParams = {}) => {
+    if (searchParams && Object.keys(searchParams).length > 0) {
+      searchParamsRef.current = searchParams;
+    }
+
     try {
       setIsLoading(true);
+
+      const params = { ...searchParamsRef.current };
       const [globalRes, myRes] = await Promise.all([
-        api.getListings(signal),
+        api.getListings(params, signal),
         user ? api.getMyListings(signal) : Promise.resolve({ data: [] })
       ]);
 
       setMarketplaceListings((globalRes.data || []).map(mapListing));
+      if (globalRes.pagination) {
+        setPagination(globalRes.pagination);
+      }
       setMyListings((myRes.data || []).map(mapListing));
       setError(null);
     } catch (err) {
@@ -53,15 +65,24 @@ export function ListingProvider({ children }) {
         setIsLoading(false);
       }
     }
-  };
+  }, [user]);
 
+  // Initial fetch — no search params
   useEffect(() => {
     const abortController = new AbortController();
-    refreshListings(abortController.signal);
+    refreshListings(abortController.signal, {});
     return () => {
       abortController.abort();
     };
-  }, [user]);
+  }, [refreshListings]);
+
+  const updateListing = async (id, payload) => {
+    const res = await api.updateListing(id, payload);
+    if (res.success) {
+      await refreshListings();
+    }
+    return res;
+  };
 
   const toggleHidden = (id) => {
     setMyListings((prev) =>
@@ -84,8 +105,10 @@ export function ListingProvider({ children }) {
         myListings,
         isLoading,
         error,
+        pagination,
         toggleHidden,
         deleteListing,
+        updateListing,
         refreshListings
       }}
     >

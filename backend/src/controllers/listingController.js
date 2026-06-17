@@ -1,25 +1,34 @@
 import * as listingService from '../services/listingService.js';
 import * as uploadService from '../services/uploadService.js';
+import { createListingSchema, updateListingSchema, validate } from '../utils/validation.js';
 
 /**
  * Controller to handle the GET /api/listings request.
+ * Supports query params: q (search), category, page, limit.
  */
 export const getListings = async (req, res) => {
   try {
-    // 1. Call the service to fetch pure data from Prisma
-    const listings = await listingService.getActiveListings();
+    const { q, category, page, limit } = req.query;
 
-    // 2. Use Express 'res' to send a JSON payload back to the client
-    // We send a 200 OK status, and structure the payload securely.
+    const result = await listingService.getActiveListings({
+      q: q || undefined,
+      category: category || undefined,
+      page: page !== undefined ? Number(page) : undefined,
+      limit: limit !== undefined ? Number(limit) : undefined
+    });
+
+    // result looks like: { data: [...], pagination: { total, page, limit, totalPages } }
+    const { data, pagination } = result;
+
     res.status(200).json({
       success: true,
-      count: listings.length,
-      data: listings,
+      count: data.length,
+      data,
+      ...(pagination ? { pagination } : {})
     });
   } catch (error) {
     console.error('Error in getListings controller:', error);
     
-    // Send a 500 Internal Server Error if something breaks
     res.status(500).json({
       success: false,
       message: 'Failed to fetch listings. Please try again later.',
@@ -81,10 +90,17 @@ export const getMyListings = async (req, res) => {
 
 export const createListing = async (req, res) => {
   try {
-    const userId = req.user.id;
-    const payload = req.body || {};
+    const validation = validate(createListingSchema, req.body || {});
+    if (!validation.success) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed.',
+        errors: validation.errors
+      });
+    }
 
-    const createdListing = await listingService.createListing(userId, payload);
+    const userId = req.user.id;
+    const createdListing = await listingService.createListing(userId, validation.data);
 
     res.status(201).json({
       success: true,
@@ -113,6 +129,39 @@ export const uploadListingImage = async (req, res) => {
     res.status(statusCode).json({
       success: false,
       message: error?.message || 'Failed to upload image. Please try again later.'
+    });
+  }
+};
+
+/**
+ * Controller to handle the PATCH /api/listings/:id request.
+ */
+export const updateListing = async (req, res) => {
+  try {
+    const validation = validate(updateListingSchema, req.body || {});
+    if (!validation.success) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed.',
+        errors: validation.errors
+      });
+    }
+
+    const userId = req.user.id;
+    const { id } = req.params;
+
+    const updatedListing = await listingService.updateListing(id, userId, validation.data);
+
+    res.status(200).json({
+      success: true,
+      data: updatedListing
+    });
+  } catch (error) {
+    console.error('Error updating listing:', error);
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    res.status(statusCode).json({
+      success: false,
+      message: error?.message || 'Failed to update listing. Please try again later.'
     });
   }
 };

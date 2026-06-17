@@ -1,5 +1,5 @@
-import React, { useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useRef, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../services/api.js";
 import { useListings } from "../context/ListingContext.jsx";
 import { resolveMediaDisplay } from "../utils/mediaUtils.js";
@@ -16,28 +16,34 @@ const conditionOptions = [
 const categoryOptions = ["Tech", "Adventure", "Sports", "Books", "General", "Other"];
 const locationOptions = ["Central Garden", "Pie-Chai", "Bihan", "AMUL", "Other"];
 
+const EMPTY_FORM = {
+  title: "",
+  category: "Tech",
+  customCategory: "",
+  description: "",
+  condition: "like-new",
+  pricePerDay: "",
+  securityDeposit: "",
+  mrp: "",
+  location: "Central Garden",
+  customLocation: "",
+  minDays: 1,
+  images: []
+};
+
 function AddListing() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editId = searchParams.get('edit');
+  const isEditMode = Boolean(editId);
   const { refreshListings } = useListings();
   const [step, setStep] = useState(1);
   const [error, setError] = useState("");
   const [isUploading, setIsUploading] = useState(false);
+  const [isLoadingEdit, setIsLoadingEdit] = useState(isEditMode);
   const fileInputRef = useRef(null);
-  
-  const [form, setForm] = useState({
-    title: "",
-    category: "Tech",
-    customCategory: "",
-    description: "",
-    condition: "like-new",
-    pricePerDay: "",
-    securityDeposit: "",
-    mrp: "",
-    location: "Central Garden",
-    customLocation: "",
-    minDays: 1,
-    images: []
-  });
+
+  const [form, setForm] = useState(EMPTY_FORM);
 
   const progress = (step / steps.length) * 100;
 
@@ -145,63 +151,121 @@ function AddListing() {
     });
   };
 
+  // Load existing listing data for edit mode
+  useEffect(() => {
+    if (!editId) return;
+
+    const loadListing = async () => {
+      try {
+        const res = await api.getListingById(editId);
+        if (res.success && res.data) {
+          const item = res.data;
+          setForm({
+            title: item.title || '',
+            category: categoryOptions.includes(item.category) ? item.category : 'Other',
+            customCategory: categoryOptions.includes(item.category) ? '' : (item.category || ''),
+            description: item.description || '',
+            condition: item.condition || 'good',
+            pricePerDay: String(item.dailyRentalRate || ''),
+            securityDeposit: String(item.securityDeposit || ''),
+            mrp: String(item.retailPrice || ''),
+            location: locationOptions.includes(item.preferredPickupZone) ? item.preferredPickupZone : 'Other',
+            customLocation: locationOptions.includes(item.preferredPickupZone) ? '' : (item.preferredPickupZone || ''),
+            minDays: item.minimumRentalDays || 1,
+            images: (item.images || []).map((img) => img.imageUrl)
+          });
+        }
+      } catch {
+        setError('Failed to load listing for editing.');
+      } finally {
+        setIsLoadingEdit(false);
+      }
+    };
+
+    loadListing();
+  }, [editId]);
+
   const handlePublish = async () => {
     if (validateStep(3)) {
       const finalCategory = form.category === "Other" ? form.customCategory : form.category;
       const finalLocation = form.location === "Other" ? form.customLocation : form.location;
 
+      const payload = {
+        title: form.title,
+        description: form.description,
+        category: finalCategory,
+        condition: form.condition,
+        dailyRentalRate: Number(form.pricePerDay),
+        securityDeposit: Number(form.securityDeposit),
+        retailPrice: Number(form.mrp),
+        minimumRentalDays: Number(form.minDays),
+        preferredPickupZone: finalLocation,
+        images: form.images.map((imageUrl, index) => ({
+          imageUrl,
+          displayOrder: index
+        }))
+      };
+
       try {
-        const response = await api.createListing({
-          title: form.title,
-          description: form.description,
-          category: finalCategory,
-          condition: form.condition,
-          dailyRentalRate: Number(form.pricePerDay),
-          securityDeposit: Number(form.securityDeposit),
-          retailPrice: Number(form.mrp),
-          minimumRentalDays: Number(form.minDays),
-          preferredPickupZone: finalLocation,
-          images: form.images.map((imageUrl, index) => ({
-            imageUrl,
-            displayOrder: index
-          }))
-        });
+        if (isEditMode) {
+          await api.updateListing(editId, payload);
+        } else {
+          const response = await api.createListing(payload);
+          await refreshListings();
+          navigate(`/item/${response.data.id}`);
+          return;
+        }
 
         await refreshListings();
-        navigate(`/item/${response.data.id}`);
+        navigate(`/item/${editId}`);
       } catch (err) {
         setError(err.message || "Failed to publish listing. Please try again.");
       }
     }
   };
 
+  const handleCancelEdit = () => {
+    navigate('/dashboard/listings');
+  };
+
+  if (isLoadingEdit) {
+    return (
+      <section className="listing-flow">
+        <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--muted)' }}>
+          Loading listing for editing...
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="listing-flow">
       
       <div className="listing-header">
         <div>
-          <h2>List Your Gear</h2>
-          <p>Share your items with the campus community securely.</p>
+          <h2>{isEditMode ? 'Edit Your Gear' : 'List Your Gear'}</h2>
+          <p>{isEditMode ? 'Update your listing details below.' : 'Share your items with the campus community securely.'}</p>
         </div>
-        <span className="listing-step">Step {step} of {steps.length}</span>
+        {!isEditMode && <span className="listing-step">Step {step} of {steps.length}</span>}
       </div>
 
-      <div className="listing-progress">
-        <div className="listing-progress-bar">
-          <span className="listing-progress-fill" style={{ width: `${progress}%` }} />
+      {!isEditMode && (
+        <div className="listing-progress">
+          <div className="listing-progress-bar">
+            <span className="listing-progress-fill" style={{ width: `${progress}%` }} />
+          </div>
+          <div className="listing-progress-labels">
+            {steps.map((label, index) => {
+              const isCompletedOrActive = step >= index + 1;
+              return (
+                <span key={label} className={step === index + 1 ? "active" : isCompletedOrActive ? "complete" : ""}>
+                  {label}
+                </span>
+              );
+            })}
+          </div>
         </div>
-        <div className="listing-progress-labels">
-          {steps.map((label, index) => {
-            // 5. Step Indicator Highlight logic
-            const isCompletedOrActive = step >= index + 1;
-            return (
-              <span key={label} className={step === index + 1 ? "active" : isCompletedOrActive ? "complete" : ""}>
-                {label}
-              </span>
-            );
-          })}
-        </div>
-      </div>
+      )}
 
       {error && (
         <div style={{ background: 'rgba(225, 29, 72, 0.1)', color: '#e11d48', padding: '16px', borderRadius: '8px', marginBottom: '24px', fontWeight: 500 }}>
@@ -495,9 +559,11 @@ function AddListing() {
           </div>
 
           <div className="listing-actions" style={{ marginTop: '24px' }}>
-            <button type="button" className="btn ghost" onClick={goBack}>Back to Pricing</button>
+            <button type="button" className="btn ghost" onClick={isEditMode ? handleCancelEdit : goBack}>
+              {isEditMode ? 'Cancel' : 'Back to Pricing'}
+            </button>
             <button type="button" className="btn primary" onClick={handlePublish} disabled={form.images.length === 0}>
-              Publish to Marketplace
+              {isEditMode ? 'Save Changes' : 'Publish to Marketplace'}
             </button>
           </div>
           

@@ -90,11 +90,6 @@ export function BookingProvider({ children }) {
     await refreshBookings();
   }, [refreshBookings]);
 
-  const markReturned = useCallback(async (id) => {
-    await api.updateBookingStatus(id, BOOKING_STATUS.completed);
-    await refreshBookings();
-  }, [refreshBookings]);
-
   const markItemGiven = useCallback(async (id) => {
     await api.updateBookingStatus(id, BOOKING_STATUS.itemGiven);
     await refreshBookings();
@@ -121,7 +116,6 @@ export function BookingProvider({ children }) {
       approveBooking,
       rejectBooking,
       cancelBooking,
-      markReturned,
       markItemGiven,
       confirmItemReceived,
       requestReturn,
@@ -129,7 +123,7 @@ export function BookingProvider({ children }) {
       setBookings,
       refreshBookings,
     }),
-    [bookings, approveBooking, rejectBooking, cancelBooking, markReturned, markItemGiven, confirmItemReceived, requestReturn, confirmReturn, setBookings, refreshBookings]
+    [bookings, approveBooking, rejectBooking, cancelBooking, markItemGiven, confirmItemReceived, requestReturn, confirmReturn, setBookings, refreshBookings]
   );
 
   return <BookingContext.Provider value={value}>{children}</BookingContext.Provider>;

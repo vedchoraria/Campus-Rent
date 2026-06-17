@@ -181,7 +181,7 @@ function MyBookings() {
               request={request}
               onCancel={async () => {
                 try {
-                  await cancelBooking(request.id, "borrower");
+                  await cancelBooking(request.id);
                 } catch (err) {
                   window.alert(err.message || "Failed to cancel booking.");
                 }
@@ -202,7 +202,7 @@ function MyBookings() {
                   rental={rental}
                   onCancel={async () => {
                     try {
-                      await cancelBooking(rental.id, "borrower");
+                      await cancelBooking(rental.id);
                     } catch (err) {
                       window.alert(err.message || "Failed to cancel booking.");
                     }
