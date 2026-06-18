@@ -43,10 +43,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
           cache-dependency-path: backend/package-lock.json
-      - name: Ensure lockfile for npm ci
-        working-directory: ./backend
-        run: npm install --package-lock-only
-
+      
       - name: Install dependencies
         working-directory: ./backend
         run: npm install
