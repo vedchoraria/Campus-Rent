@@ -8,7 +8,10 @@
     "dev": "nodemon src/server.js",
     "postinstall": "prisma generate",
     "test": "vitest run",
-"test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "keywords": [],
   "author": "",
@@ -27,7 +30,11 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.4",
     "@types/node": "^25.6.0",
+    "@vitest/coverage-v8": "^4.1.9",
+    "eslint": "^9.39.4",
+    "globals": "^17.6.0",
     "nodemon": "^3.1.14",
     "prisma": "^5.22.0",
     "supertest": "^7.2.2",
