@@ -62,7 +62,7 @@ describe('Auth — POST /api/auth/signup', () => {
       .post('/api/auth/signup')
       .send({
         fullName: 'Gmail User',
-        collegeEmail: `test_${uniqueSuffix}_gmail@gmail.com`,
+        collegeEmail: `test_${uniqueSuffix}@gmail.com`,
         password: TEST_PASSWORD,
       });
 
