@@ -1,10 +1,11 @@
 import prisma from '../utils/prismaClient.js';
+import { AppError } from '../utils/AppError.js';
+import logger from '../utils/logger.js';
 
-class BookingError extends Error {
+class BookingError extends AppError {
   constructor(message, statusCode) {
-    super(message);
+    super(message, statusCode);
     this.name = 'BookingError';
-    this.statusCode = statusCode;
   }
 }
 
@@ -181,6 +182,10 @@ export const updateBookingStatus = async ({ bookingId, actorId, status }) => {
   const isOwner = booking.ownerId === String(actorId);
   const isBorrower = booking.borrowerId === String(actorId);
   if (!isOwner && !isBorrower) {
+    logger.warn(
+      { actorId, bookingId, bookingOwnerId: booking.ownerId, bookingBorrowerId: booking.borrowerId },
+      'Booking authorization violation: user is neither owner nor borrower'
+    );
     throw new BookingError('You are not authorized to update this booking.', 403);
   }
 
@@ -189,6 +194,7 @@ export const updateBookingStatus = async ({ bookingId, actorId, status }) => {
 
   if (nextStatus === BOOKING_STATUS.approved) {
     if (!isOwner) {
+      logger.warn({ actorId, bookingId, role: 'borrower', attemptedAction: 'approve' }, 'Booking authorization violation: borrower attempted to approve');
       throw new BookingError('Only the listing owner can approve this booking.', 403);
     }
     if (booking.status !== BOOKING_STATUS.requested) {

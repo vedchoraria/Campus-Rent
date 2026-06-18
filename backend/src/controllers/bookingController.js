@@ -1,7 +1,7 @@
 import * as bookingService from '../services/bookingService.js';
 import { createBookingSchema, validate } from '../utils/validation.js';
 
-export const getMyBookings = async (req, res) => {
+export const getMyBookings = async (req, res, next) => {
   try {
     const userId = req.user.id;
     
@@ -12,22 +12,20 @@ export const getMyBookings = async (req, res) => {
       data
     });
   } catch (error) {
-    console.error('Error in getMyBookings controller:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch bookings. Please try again later.'
-    });
+    req.log?.error({ err: error }, 'Error in getMyBookings controller');
+    next(error);
   }
 };
 
-export const createBooking = async (req, res) => {
+export const createBooking = async (req, res, next) => {
   try {
     const validation = validate(createBookingSchema, req.body || {});
     if (!validation.success) {
       return res.status(400).json({
         success: false,
         message: 'Validation failed.',
-        errors: validation.errors
+        errors: validation.errors,
+        requestId: req.requestId
       });
     }
 
@@ -41,16 +39,12 @@ export const createBooking = async (req, res) => {
       data: booking
     });
   } catch (error) {
-    console.error('Error in createBooking controller:', error);
-    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
-    res.status(statusCode).json({
-      success: false,
-      message: error?.message || 'Failed to create booking. Please try again later.'
-    });
+    req.log?.error({ err: error }, 'Error in createBooking controller');
+    next(error);
   }
 };
 
-export const updateBookingStatus = async (req, res) => {
+export const updateBookingStatus = async (req, res, next) => {
   try {
     const actorId = req.user.id;
     const { bookingId } = req.params;
@@ -67,11 +61,7 @@ export const updateBookingStatus = async (req, res) => {
       data: booking
     });
   } catch (error) {
-    console.error('Error in updateBookingStatus controller:', error);
-    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
-    res.status(statusCode).json({
-      success: false,
-      message: error?.message || 'Failed to update booking status. Please try again later.'
-    });
+    req.log?.error({ err: error }, 'Error in updateBookingStatus controller');
+    next(error);
   }
 };

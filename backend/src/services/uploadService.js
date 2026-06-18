@@ -1,10 +1,9 @@
 import cloudinary from '../config/cloudinary.js';
+import { BadRequestError } from '../utils/AppError.js';
 
 export const uploadImageToCloudinary = async (file) => {
   if (!file) {
-    const error = new Error('Image file is required.');
-    error.statusCode = 400;
-    throw error;
+    throw new BadRequestError('Image file is required.');
   }
 
   const dataUri = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;

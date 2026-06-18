@@ -6,7 +6,7 @@ import { createListingSchema, updateListingSchema, validate } from '../utils/val
  * Controller to handle the GET /api/listings request.
  * Supports query params: q (search), category, page, limit.
  */
-export const getListings = async (req, res) => {
+export const getListings = async (req, res, next) => {
   try {
     const { q, category, page, limit } = req.query;
 
@@ -17,7 +17,6 @@ export const getListings = async (req, res) => {
       limit: limit !== undefined ? Number(limit) : undefined
     });
 
-    // result looks like: { data: [...], pagination: { total, page, limit, totalPages } }
     const { data, pagination } = result;
 
     res.status(200).json({
@@ -27,49 +26,36 @@ export const getListings = async (req, res) => {
       ...(pagination ? { pagination } : {})
     });
   } catch (error) {
-    console.error('Error in getListings controller:', error);
-    
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch listings. Please try again later.',
-    });
+    req.log?.error({ err: error }, 'Error in getListings controller');
+    next(error);
   }
 };
 
-/**
- * Controller to handle the GET /api/listings/:id request.
- */
-export const getListing = async (req, res) => {
+export const getListing = async (req, res, next) => {
   try {
     const { id } = req.params;
     
-    // 1. Call the service to fetch the specific listing
     const listing = await listingService.getListingById(id);
 
-    // 2. Handle missing/deleted listing
     if (!listing) {
       return res.status(404).json({
         success: false,
         message: 'Listing not found or has been removed',
+        requestId: req.requestId
       });
     }
 
-    // 3. Send successful response
     res.status(200).json({
       success: true,
       data: listing,
     });
   } catch (error) {
-    console.error(`Error in getListing controller for ID ${req.params.id}:`, error);
-    
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch listing details. Please try again later.',
-    });
+    req.log?.error({ err: error, listingId: req.params.id }, 'Error in getListing controller');
+    next(error);
   }
 };
 
-export const getMyListings = async (req, res) => {
+export const getMyListings = async (req, res, next) => {
   try {
     const userId = req.user.id;
     
@@ -80,22 +66,20 @@ export const getMyListings = async (req, res) => {
       data: listings
     });
   } catch (error) {
-    console.error('Error fetching my listings:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch your listings. Please try again later.'
-    });
+    req.log?.error({ err: error }, 'Error fetching my listings');
+    next(error);
   }
 };
 
-export const createListing = async (req, res) => {
+export const createListing = async (req, res, next) => {
   try {
     const validation = validate(createListingSchema, req.body || {});
     if (!validation.success) {
       return res.status(400).json({
         success: false,
         message: 'Validation failed.',
-        errors: validation.errors
+        errors: validation.errors,
+        requestId: req.requestId
       });
     }
 
@@ -107,15 +91,12 @@ export const createListing = async (req, res) => {
       data: createdListing
     });
   } catch (error) {
-    console.error('Error creating listing:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to create listing. Please try again later.'
-    });
+    req.log?.error({ err: error }, 'Error creating listing');
+    next(error);
   }
 };
 
-export const uploadListingImage = async (req, res) => {
+export const uploadListingImage = async (req, res, next) => {
   try {
     const uploaded = await uploadService.uploadImageToCloudinary(req.file);
 
@@ -124,26 +105,20 @@ export const uploadListingImage = async (req, res) => {
       data: uploaded
     });
   } catch (error) {
-    console.error('Error uploading listing image:', error);
-    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
-    res.status(statusCode).json({
-      success: false,
-      message: error?.message || 'Failed to upload image. Please try again later.'
-    });
+    req.log?.error({ err: error }, 'Error uploading listing image');
+    next(error);
   }
 };
 
-/**
- * Controller to handle the PATCH /api/listings/:id request.
- */
-export const updateListing = async (req, res) => {
+export const updateListing = async (req, res, next) => {
   try {
     const validation = validate(updateListingSchema, req.body || {});
     if (!validation.success) {
       return res.status(400).json({
         success: false,
         message: 'Validation failed.',
-        errors: validation.errors
+        errors: validation.errors,
+        requestId: req.requestId
       });
     }
 
@@ -157,16 +132,12 @@ export const updateListing = async (req, res) => {
       data: updatedListing
     });
   } catch (error) {
-    console.error('Error updating listing:', error);
-    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
-    res.status(statusCode).json({
-      success: false,
-      message: error?.message || 'Failed to update listing. Please try again later.'
-    });
+    req.log?.error({ err: error, listingId: req.params.id }, 'Error updating listing');
+    next(error);
   }
 };
 
-export const deleteListing = async (req, res) => {
+export const deleteListing = async (req, res, next) => {
   try {
     const userId = req.user.id;
     const { id } = req.params;
@@ -177,11 +148,7 @@ export const deleteListing = async (req, res) => {
       data: result
     });
   } catch (error) {
-    console.error('Error deleting listing:', error);
-    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
-    res.status(statusCode).json({
-      success: false,
-      message: error?.message || 'Failed to delete listing. Please try again later.'
-    });
+    req.log?.error({ err: error, listingId: req.params.id }, 'Error deleting listing');
+    next(error);
   }
 };

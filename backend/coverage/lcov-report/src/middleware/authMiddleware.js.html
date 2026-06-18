@@ -23,9 +23,9 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">77.77% </span>
+                <span class="strong">65.21% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>14/18</span>
+                <span class='fraction'>15/23</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">77.77% </span>
+                <span class="strong">65.21% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>14/18</span>
+                <span class='fraction'>15/23</span>
             </div>
         
             
@@ -123,7 +123,19 @@
 <a name='L58'></a><a href='#L58'>58</a>
 <a name='L59'></a><a href='#L59'>59</a>
 <a name='L60'></a><a href='#L60'>60</a>
-<a name='L61'></a><a href='#L61'>61</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L61'></a><a href='#L61'>61</a>
+<a name='L62'></a><a href='#L62'>62</a>
+<a name='L63'></a><a href='#L63'>63</a>
+<a name='L64'></a><a href='#L64'>64</a>
+<a name='L65'></a><a href='#L65'>65</a>
+<a name='L66'></a><a href='#L66'>66</a>
+<a name='L67'></a><a href='#L67'>67</a>
+<a name='L68'></a><a href='#L68'>68</a>
+<a name='L69'></a><a href='#L69'>69</a>
+<a name='L70'></a><a href='#L70'>70</a>
+<a name='L71'></a><a href='#L71'>71</a>
+<a name='L72'></a><a href='#L72'>72</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">3x</span>
@@ -133,6 +145,8 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">67x</span>
 <span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -140,6 +154,8 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">65x</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -150,6 +166,8 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">67x</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -169,6 +187,8 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">65x</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -178,6 +198,8 @@
 <span class="cline-any cline-yes">65x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -185,6 +207,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import jwt from 'jsonwebtoken';
 import prisma from '../utils/prismaClient.js';
+import logger from '../utils/logger.js';
 &nbsp;
 export const requireAuth = async (req, res, next) =&gt; {
   try {
@@ -192,16 +215,20 @@ export const requireAuth = async (req, res, next) =&gt; {
     const [scheme, token] = authHeader.split(' ');
 &nbsp;
     if (scheme !== 'Bearer' || !token) {
+      logger.warn({ requestId: req.requestId }, 'Unauthorized access attempt: missing token');
       return res.status(401).json({
         success: false,
-        message: 'Authorization token is required.'
+        message: 'Authorization token is required.',
+        requestId: req.requestId
       });
     }
 &nbsp;
     <span class="missing-if-branch" title="if path not taken" >I</span>if (!process.env.JWT_SECRET) {
+<span class="cstat-no" title="statement not covered" >      logger.error('JWT_SECRET is not configured');</span>
 <span class="cstat-no" title="statement not covered" >      return res.status(500).json({</span>
         success: false,
-        message: 'JWT configuration is missing.'
+        message: 'JWT configuration is missing.',
+        requestId: req.requestId
       });
     }
 &nbsp;
@@ -209,9 +236,11 @@ export const requireAuth = async (req, res, next) =&gt; {
     const userId = payload?.sub;
 &nbsp;
     <span class="missing-if-branch" title="if path not taken" >I</span>if (!userId) {
+<span class="cstat-no" title="statement not covered" >      logger.warn({ requestId: req.requestId }, 'Unauthorized access attempt: invalid token payload');</span>
 <span class="cstat-no" title="statement not covered" >      return res.status(401).json({</span>
         success: false,
-        message: 'Invalid token payload.'
+        message: 'Invalid token payload.',
+        requestId: req.requestId
       });
     }
 &nbsp;
@@ -228,18 +257,22 @@ export const requireAuth = async (req, res, next) =&gt; {
     });
 &nbsp;
     <span class="missing-if-branch" title="if path not taken" >I</span>if (!user) {
+<span class="cstat-no" title="statement not covered" >      logger.warn({ requestId: req.requestId, userId }, 'Unauthorized access attempt: user not found');</span>
 <span class="cstat-no" title="statement not covered" >      return res.status(401).json({</span>
         success: false,
-        message: 'Authentication failed.'
+        message: 'Authentication failed.',
+        requestId: req.requestId
       });
     }
 &nbsp;
     req.user = user;
     next();
   } catch (error) {
+<span class="cstat-no" title="statement not covered" >    logger.warn({ err: error, requestId: req.requestId }, 'Unauthorized access attempt: invalid or expired token');</span>
 <span class="cstat-no" title="statement not covered" >    return res.status(401).json({</span>
       success: false,
-      message: 'Invalid or expired token.'
+      message: 'Invalid or expired token.',
+      requestId: req.requestId
     });
   }
 };
@@ -250,7 +283,7 @@ export const requireAuth = async (req, res, next) =&gt; {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-06-17T19:34:29.664Z
+                at 2026-06-18T12:23:39.684Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

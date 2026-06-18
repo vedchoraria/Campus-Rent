@@ -23,16 +23,16 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">93.1% </span>
+                <span class="strong">92.59% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>27/29</span>
+                <span class='fraction'>25/27</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">57.14% </span>
+                <span class="strong">66.66% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>8/14</span>
+                <span class='fraction'>4/6</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">93.1% </span>
+                <span class="strong">92.59% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>27/29</span>
+                <span class='fraction'>25/27</span>
             </div>
         
             
@@ -130,17 +130,7 @@
 <a name='L65'></a><a href='#L65'>65</a>
 <a name='L66'></a><a href='#L66'>66</a>
 <a name='L67'></a><a href='#L67'>67</a>
-<a name='L68'></a><a href='#L68'>68</a>
-<a name='L69'></a><a href='#L69'>69</a>
-<a name='L70'></a><a href='#L70'>70</a>
-<a name='L71'></a><a href='#L71'>71</a>
-<a name='L72'></a><a href='#L72'>72</a>
-<a name='L73'></a><a href='#L73'>73</a>
-<a name='L74'></a><a href='#L74'>74</a>
-<a name='L75'></a><a href='#L75'>75</a>
-<a name='L76'></a><a href='#L76'>76</a>
-<a name='L77'></a><a href='#L77'>77</a>
-<a name='L78'></a><a href='#L78'>78</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L68'></a><a href='#L68'>68</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">3x</span>
@@ -159,14 +149,12 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-yes">28x</span>
 <span class="cline-any cline-yes">28x</span>
 <span class="cline-any cline-yes">28x</span>
 <span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -185,10 +173,6 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -211,16 +195,12 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">16x</span>
 <span class="cline-any cline-yes">16x</span>
-<span class="cline-any cline-yes">16x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import * as bookingService from '../services/bookingService.js';
 import { createBookingSchema, validate } from '../utils/validation.js';
 &nbsp;
-export const getMyBookings = async (req, res) =&gt; {
+export const getMyBookings = async (req, res, next) =&gt; {
   try {
     const userId = req.user.id;
     
@@ -231,22 +211,20 @@ export const getMyBookings = async (req, res) =&gt; {
       data
     });
   } catch (error) {
-<span class="cstat-no" title="statement not covered" >    console.error('Error in getMyBookings controller:', error);</span>
-<span class="cstat-no" title="statement not covered" >    res.status(500).json({</span>
-      success: false,
-      message: 'Failed to fetch bookings. Please try again later.'
-    });
+<span class="cstat-no" title="statement not covered" >    req.log?.error({ err: error }, 'Error in getMyBookings controller');</span>
+<span class="cstat-no" title="statement not covered" >    next(error);</span>
   }
 };
 &nbsp;
-export const createBooking = async (req, res) =&gt; {
+export const createBooking = async (req, res, next) =&gt; {
   try {
     const validation = validate(createBookingSchema, req.body || <span class="branch-1 cbranch-no" title="branch not covered" >{})</span>;
     if (!validation.success) {
       return res.status(400).json({
         success: false,
         message: 'Validation failed.',
-        errors: validation.errors
+        errors: validation.errors,
+        requestId: req.requestId
       });
     }
 &nbsp;
@@ -260,16 +238,12 @@ export const createBooking = async (req, res) =&gt; {
       data: booking
     });
   } catch (error) {
-    console.error('Error in createBooking controller:', error);
-    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : <span class="branch-1 cbranch-no" title="branch not covered" >500;</span>
-    res.status(statusCode).json({
-      success: false,
-      message: error?.message || <span class="branch-1 cbranch-no" title="branch not covered" >'Failed to create booking. Please try again later.'</span>
-    });
+    req.log?.error({ err: error }, 'Error in createBooking controller');
+    next(error);
   }
 };
 &nbsp;
-export const updateBookingStatus = async (req, res) =&gt; {
+export const updateBookingStatus = async (req, res, next) =&gt; {
   try {
     const actorId = req.user.id;
     const { bookingId } = req.params;
@@ -286,12 +260,8 @@ export const updateBookingStatus = async (req, res) =&gt; {
       data: booking
     });
   } catch (error) {
-    console.error('Error in updateBookingStatus controller:', error);
-    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : <span class="branch-1 cbranch-no" title="branch not covered" >500;</span>
-    res.status(statusCode).json({
-      success: false,
-      message: error?.message || <span class="branch-1 cbranch-no" title="branch not covered" >'Failed to update booking status. Please try again later.'</span>
-    });
+    req.log?.error({ err: error }, 'Error in updateBookingStatus controller');
+    next(error);
   }
 };
 &nbsp;</pre></td></tr></table></pre>
@@ -301,7 +271,7 @@ export const updateBookingStatus = async (req, res) =&gt; {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-06-17T19:34:29.804Z
+                at 2026-06-18T12:23:39.749Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

@@ -1,10 +1,10 @@
 import prisma from '../utils/prismaClient.js';
+import { AppError } from '../utils/AppError.js';
 
-class ListingError extends Error {
+class ListingError extends AppError {
   constructor(message, statusCode) {
-    super(message);
+    super(message, statusCode);
     this.name = 'ListingError';
-    this.statusCode = statusCode;
   }
 }
 

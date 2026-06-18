@@ -12,10 +12,11 @@ describe('Smoke Test', () => {
     const res = await request(app).get('/health');
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({
-      status: 'ok',
-      message: 'CampusRent API is running',
-    });
+    expect(res.body.status).toBe('ok');
+    expect(res.body).toHaveProperty('uptime');
+    expect(res.body).toHaveProperty('database');
+    expect(res.body).toHaveProperty('timestamp');
+    expect(res.body).toHaveProperty('version');
   });
 
   it('should return 404 for unknown routes', async () => {

@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import prisma from '../utils/prismaClient.js';
+import logger from '../utils/logger.js';
 
 export const requireAuth = async (req, res, next) => {
   try {
@@ -7,16 +8,20 @@ export const requireAuth = async (req, res, next) => {
     const [scheme, token] = authHeader.split(' ');
 
     if (scheme !== 'Bearer' || !token) {
+      logger.warn({ requestId: req.requestId }, 'Unauthorized access attempt: missing token');
       return res.status(401).json({
         success: false,
-        message: 'Authorization token is required.'
+        message: 'Authorization token is required.',
+        requestId: req.requestId
       });
     }
 
     if (!process.env.JWT_SECRET) {
+      logger.error('JWT_SECRET is not configured');
       return res.status(500).json({
         success: false,
-        message: 'JWT configuration is missing.'
+        message: 'JWT configuration is missing.',
+        requestId: req.requestId
       });
     }
 
@@ -24,9 +29,11 @@ export const requireAuth = async (req, res, next) => {
     const userId = payload?.sub;
 
     if (!userId) {
+      logger.warn({ requestId: req.requestId }, 'Unauthorized access attempt: invalid token payload');
       return res.status(401).json({
         success: false,
-        message: 'Invalid token payload.'
+        message: 'Invalid token payload.',
+        requestId: req.requestId
       });
     }
 
@@ -36,6 +43,7 @@ export const requireAuth = async (req, res, next) => {
         id: true,
         fullName: true,
         collegeEmail: true,
+        role: true,
         department: true,
         yearOfStudy: true,
         profileImage: true
@@ -43,18 +51,22 @@ export const requireAuth = async (req, res, next) => {
     });
 
     if (!user) {
+      logger.warn({ requestId: req.requestId, userId }, 'Unauthorized access attempt: user not found');
       return res.status(401).json({
         success: false,
-        message: 'Authentication failed.'
+        message: 'Authentication failed.',
+        requestId: req.requestId
       });
     }
 
     req.user = user;
     next();
   } catch (error) {
+    logger.warn({ err: error, requestId: req.requestId }, 'Unauthorized access attempt: invalid or expired token');
     return res.status(401).json({
       success: false,
-      message: 'Invalid or expired token.'
+      message: 'Invalid or expired token.',
+      requestId: req.requestId
     });
   }
 };

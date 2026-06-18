@@ -1,24 +1,77 @@
 import express from 'express';
 import cors from 'cors';
+import pinoHttp from 'pino-http';
 import listingRoutes from './routes/listingRoutes.js';
 import bookingRoutes from './routes/bookingRoutes.js';
 import authRoutes from './routes/authRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
 import { corsOptions } from './config/cors.js';
+import requestContext from './middleware/requestContext.js';
+import errorMiddleware, { notFoundHandler } from './middleware/errorMiddleware.js';
+import logger from './utils/logger.js';
+import prisma from './utils/prismaClient.js';
 
 const app = express();
 
-// Middleware
+// --- Middleware chain ---
+
+// 1. CORS
 app.use(cors(corsOptions));
+
+// 2. Body parsing
 app.use(express.json());
 
-// Routes
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok', message: 'CampusRent API is running' });
+// 3. Request correlation ID (must be early so all downstream logs include requestId)
+app.use(requestContext);
+
+// 4. HTTP request logging (pino-http)
+app.use(
+  pinoHttp({
+    logger,
+    autoLogging: {
+      ignore: (req) => req.url === '/health',
+    },
+    customSuccessMessage: (req, res) => `${req.method} ${req.url} ${res.statusCode}`,
+    customErrorMessage: (req, res, err) => `${req.method} ${req.url} ${res.statusCode} - ${err.message}`,
+  })
+);
+
+// --- Routes ---
+
+// Health check (before API routes, excluded from autoLogging above)
+app.get('/health', async (req, res) => {
+  const start = Date.now();
+  let dbStatus = 'connected';
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+  } catch {
+    dbStatus = 'disconnected';
+  }
+  const uptime = process.uptime();
+
+  res.status(200).json({
+    status: 'ok',
+    uptime,
+    database: dbStatus,
+    timestamp: new Date().toISOString(),
+    version: process.env.npm_package_version || '1.0.0',
+  });
+
+  req.log?.info({ uptime, dbStatus, duration: Date.now() - start }, 'Health check completed');
 });
 
-// Future routes will be mounted here
+// API routes
 app.use('/api/listings', listingRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
+
+// --- Error handling (must be last) ---
+
+// 404 handler for unknown routes
+app.use(notFoundHandler);
+
+// Global error handler
+app.use(errorMiddleware);
 
 export default app;

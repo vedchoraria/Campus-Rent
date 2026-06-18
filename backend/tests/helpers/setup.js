@@ -67,6 +67,7 @@ export const createTestUser = async (overrides = {}) => {
     fullName: overrides.fullName || `Test User ${suffix}`,
     collegeEmail: overrides.collegeEmail || `test_${suffix}@nitrr.ac.in`,
     passwordHash,
+    role: overrides.role || 'USER',
     department: overrides.department || 'Computer Science',
     yearOfStudy: overrides.yearOfStudy || 'Junior',
     bio: overrides.bio || 'Test user bio.',
