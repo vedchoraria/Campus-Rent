@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { setOnAuthError } from "../services/api.js";
 
-const AuthContext = createContext(null);
+export const AuthContext = createContext(null);
 const USER_KEY = "campusRent_user";
 const TOKEN_KEY = "campusRent_token";
 

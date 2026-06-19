@@ -2,7 +2,7 @@ import React, { createContext, useCallback, useContext, useState, useEffect, use
 import { api } from "../services/api.js";
 import { useAuth } from "./AuthContext.jsx";
 
-const ListingContext = createContext(null);
+export const ListingContext = createContext(null);
 
 export function ListingProvider({ children }) {
   const { user } = useAuth();
