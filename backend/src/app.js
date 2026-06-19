@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import pinoHttp from 'pino-http';
+import swaggerUi from 'swagger-ui-express';
 import listingRoutes from './routes/listingRoutes.js';
 import bookingRoutes from './routes/bookingRoutes.js';
 import authRoutes from './routes/authRoutes.js';
@@ -11,6 +12,7 @@ import requestContext from './middleware/requestContext.js';
 import errorMiddleware, { notFoundHandler } from './middleware/errorMiddleware.js';
 import logger from './utils/logger.js';
 import prisma from './utils/prismaClient.js';
+import apiSpec from './config/swagger.js';
 
 const app = express();
 
@@ -38,6 +40,18 @@ app.use(
 );
 
 // --- Routes ---
+
+// Swagger API documentation
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(apiSpec, {
+  customSiteTitle: 'CampusRent API Docs',
+  customfavIcon: undefined,
+  customCss: '.swagger-ui .topbar { display: none }',
+  swaggerOptions: {
+    persistAuthorization: true,
+    displayRequestDuration: true,
+    filter: true,
+  }
+}));
 
 // Health check (before API routes, excluded from autoLogging above)
 app.get('/health', async (req, res) => {
