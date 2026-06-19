@@ -2,129 +2,30 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 
 const STORAGE_KEY = "campusrent_chat_state";
 
-const contacts = [
-  {
-    id: "c1",
-    name: "Alex Rivera",
-    status: "Online now",
-    badge: "Alex is a verified student at North Campus",
-    messages: [
-      {
-        id: "a1",
-        sender: "them",
-        text: "Hey! I saw your listing for the Organic Chemistry 12th Edition. Is it still available for rent?",
-      },
-      {
-        id: "a2",
-        sender: "me",
-        text: "Hi Alex! Yes, it is still available. I used it last spring, so it is in great condition.",
-      },
-      {
-        id: "a3",
-        sender: "them",
-        text: "That works for me. Would you be willing to do $25 for the semester? I can meet you at the Library today.",
-      },
-      {
-        id: "a4",
-        sender: "me",
-        text: "That sounds fair. I am free around 3 PM at the main entrance. Let me know if that works.",
-      },
-    ],
-  },
-  {
-    id: "c2",
-    name: "Maya Chen",
-    status: "Last seen 1h ago",
-    badge: "Maya is verified at South Campus",
-    messages: [
-      {
-        id: "m1",
-        sender: "them",
-        text: "I can meet at the Student Union around 4 PM today if that works.",
-      },
-      {
-        id: "m2",
-        sender: "me",
-        text: "That works! I will bring the calculator and the charger.",
-      },
-    ],
-  },
-  {
-    id: "c3",
-    name: "Jordan Smith",
-    status: "Last seen 3h ago",
-    badge: "Jordan is a verified student at North Campus",
-    messages: [
-      {
-        id: "j1",
-        sender: "them",
-        text: "Thanks! The bike works perfectly. Appreciate the quick handoff.",
-      },
-      {
-        id: "j2",
-        sender: "me",
-        text: "Great to hear. Let me know if you need a lock or helmet later on.",
-      },
-    ],
-  },
-  {
-    id: "c4",
-    name: "Elena Gilbert",
-    status: "Last seen yesterday",
-    badge: "Elena is a verified student at East Campus",
-    messages: [
-      {
-        id: "e1",
-        sender: "them",
-        text: "Sent a photo of the calculator back cover. It looks clean!",
-      },
-      {
-        id: "e2",
-        sender: "me",
-        text: "Awesome. We can meet tomorrow between 11 and noon.",
-      },
-    ],
-  },
-];
-
-const buildDefaultThreads = () =>
-  contacts.reduce((acc, contact) => {
-    acc[contact.id] = contact.messages;
-    return acc;
-  }, {});
-
-const buildDefaultUnread = (activeId) =>
-  contacts.reduce((acc, contact) => {
-    acc[contact.id] = contact.id === activeId ? 0 : 1;
-    return acc;
-  }, {});
+const contacts = [];
 
 const getInitialState = () => {
-  const fallbackActive = contacts[0].id;
-  const fallbackThreads = buildDefaultThreads();
-  const fallbackUnread = buildDefaultUnread(fallbackActive);
-
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (!stored) {
       return {
-        activeId: fallbackActive,
-        threads: fallbackThreads,
-        unread: fallbackUnread,
+        activeId: null,
+        threads: {},
+        unread: {},
       };
     }
 
     const parsed = JSON.parse(stored);
     return {
-      activeId: parsed.activeId || fallbackActive,
-      threads: parsed.threads || fallbackThreads,
-      unread: parsed.unread || fallbackUnread,
+      activeId: parsed.activeId || null,
+      threads: parsed.threads || {},
+      unread: parsed.unread || {},
     };
   } catch (error) {
     return {
-      activeId: fallbackActive,
-      threads: fallbackThreads,
-      unread: fallbackUnread,
+      activeId: null,
+      threads: {},
+      unread: {},
     };
   }
 };
@@ -144,14 +45,14 @@ function Chat() {
   const [draft, setDraft] = useState("");
 
   const activeContact = useMemo(
-    () => contacts.find((contact) => contact.id === activeId) || contacts[0],
+    () => contacts.find((contact) => contact.id === activeId) || null,
     [activeId]
   );
 
   const [enterId, setEnterId] = useState(null);
   const endRef = useRef(null);
 
-  const activeMessages = threads[activeId] || [];
+  const activeMessages = (activeId && threads[activeId]) || [];
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -164,7 +65,7 @@ function Chat() {
 
   const sendMessage = () => {
     const text = draft.trim();
-    if (!text) return;
+    if (!text || !activeId) return;
 
     const newId = `m_${Date.now()}`;
     const next = [
@@ -223,7 +124,7 @@ function Chat() {
         </div>
         <div className="chat-list">
           {filteredContacts.length === 0 ? (
-            <div className="chat-empty">No conversations found.</div>
+            <div className="chat-empty">No conversations yet. Start a booking to begin chatting.</div>
           ) : (
             filteredContacts.map((contact) => {
               const preview = getLastPreview(threads[contact.id]);
@@ -255,15 +156,23 @@ function Chat() {
 
       <div className="chat-main">
         <header className="chat-header">
-          <div className="chat-user">
-            <span className="chat-avatar large">
-              {activeContact.name[0]}
-            </span>
-            <div>
-              <strong>{activeContact.name}</strong>
-              <span className="chat-status">{activeContact.status}</span>
+          {activeContact ? (
+            <div className="chat-user">
+              <span className="chat-avatar large">
+                {activeContact.name[0]}
+              </span>
+              <div>
+                <strong>{activeContact.name}</strong>
+                <span className="chat-status">{activeContact.status}</span>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="chat-user">
+              <div>
+                <strong>No conversation selected</strong>
+              </div>
+            </div>
+          )}
           <div className="chat-header-actions">
             <button type="button" aria-label="Call">
               Call
@@ -276,6 +185,11 @@ function Chat() {
 
         <div className="chat-thread" role="log" aria-live="polite">
           <div className="chat-day">Today</div>
+          {activeMessages.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--muted)' }}>
+              <p>No messages yet. Select a conversation to start chatting.</p>
+            </div>
+          )}
           {activeMessages.map((m) => (
             <div
               key={m.id}
@@ -286,7 +200,7 @@ function Chat() {
               <div className="chat-bubble">{m.text}</div>
             </div>
           ))}
-          <div className="chat-pill">{activeContact.badge}</div>
+          {activeContact && <div className="chat-pill">{activeContact.badge}</div>}
           <div ref={endRef} />
         </div>
 
@@ -307,7 +221,7 @@ function Chat() {
             type="button"
             className="chat-send"
             onClick={sendMessage}
-            disabled={!draft.trim()}
+            disabled={!draft.trim() || !activeId}
           >
             Send
           </button>
@@ -326,14 +240,6 @@ function Chat() {
           <button className="chat-link" type="button">
             Read Safety Guide
           </button>
-        </div>
-        <div className="chat-card chat-product">
-          <div className="chat-product-image" />
-          <div className="chat-product-info">
-            <strong>Organic Chemistry, 12th Ed.</strong>
-            <span>$25 / semester</span>
-            <p>Wade & Simek, hardcover. Minimal wear.</p>
-          </div>
         </div>
       </aside>
     </section>

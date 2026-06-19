@@ -1,55 +1,96 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { mockUsers } from '../data/mockData';
+import { api } from '../services/api.js';
 
 function Profile() {
   const { id } = useParams();
   const { user: authUser } = useAuth();
   
   const [copied, setCopied] = useState(false);
+  const [profileUser, setProfileUser] = useState(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileError, setProfileError] = useState(null);
 
-  // If there's an ID in the URL, fetch public user. Otherwise, use personal dashboard.
-  const profileUser = id ? mockUsers.find(u => String(u.id) === String(id)) : (authUser || mockUsers[0]);
-  const isOwner = !id;
+  const isOwner = Boolean(!id) && Boolean(authUser);
+  const isLoading = profileLoading && !profileUser;
+
+  // Fetch user profile from API
+  useEffect(() => {
+    const fetchProfile = async () => {
+      setProfileLoading(true);
+      setProfileError(null);
+      try {
+        if (id) {
+          const res = await api.get(`/users/${id}`);
+          if (res.success) {
+            setProfileUser(res.data);
+          } else {
+            setProfileError('User not found.');
+          }
+        } else if (authUser) {
+          const res = await api.get('/users/me');
+          if (res.success) {
+            setProfileUser(res.data);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch profile:', err);
+        setProfileError(err.message || 'Failed to load profile.');
+      } finally {
+        setProfileLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, [id, authUser]);
 
   // Local state for editing fields (only relevant if isOwner)
   const [isEditingBio, setIsEditingBio] = useState(false);
-  const [bioText, setBioText] = useState(profileUser?.bio || "Welcome to my CampusRent profile! I keep my gear in great condition.");
+  const [bioText, setBioText] = useState("");
   
   const [isEditingMajor, setIsEditingMajor] = useState(false);
-  const [majorText, setMajorText] = useState(profileUser?.major || "Undecided");
+  const [majorText, setMajorText] = useState("");
 
   const [isEditingCampus, setIsEditingCampus] = useState(false);
-  const [campusText, setCampusText] = useState(profileUser?.campus || "General Campus");
+  const [campusText, setCampusText] = useState("");
 
-  // Sync state if profileUser changes
+  // Sync state when profileUser loads
   useEffect(() => {
     if (profileUser) {
       setBioText(profileUser.bio || "Welcome to my CampusRent profile! I keep my gear in great condition.");
-      setMajorText(profileUser.major || "Undecided");
-      setCampusText(profileUser.campus || "General Campus");
+      setMajorText(profileUser.department || "Undecided");
+      setCampusText(profileUser.preferredPickupZones?.[0] || profileUser.yearOfStudy || "General Campus");
     }
   }, [profileUser]);
 
-  if (id && !profileUser) {
+  if (id && !profileLoading && !profileUser) {
     return (
       <div style={{ padding: '64px', textAlign: 'center', color: 'var(--text-main, #374151)' }}>
         <h2 style={{ fontSize: '28px', marginBottom: '8px' }}>User Not Found</h2>
-        <p style={{ color: 'var(--text-muted, #6b7280)' }}>The profile you are looking for does not exist or has been removed.</p>
+        <p style={{ color: 'var(--text-muted, #6b7280)' }}>{profileError || 'The profile you are looking for does not exist or has been removed.'}</p>
       </div>
     );
   }
 
-  // Define display data
-  const displayName = profileUser.full_name || profileUser.fullName || profileUser.name || profileUser.collegeEmail?.split('@')[0] || profileUser.email?.split('@')[0] || "Campus User";
-  const userEmail = profileUser.collegeEmail || profileUser.email || "hidden@campus.edu";
-  const userRating = profileUser.rating || 4.9;
-  const userReviewsCount = profileUser.reviews_count || 0;
-  const itemsLent = profileUser.items_lent || 0;
-  const itemsBorrowed = profileUser.items_borrowed || 0;
-  const pickupZones = profileUser.preferred_pickup_zones || ["General Campus Area"];
-  const userIdForShare = profileUser.id || "u_12345";
+  // Show loading state when fetching another user's profile
+  if (id && profileLoading && !profileUser) {
+    return (
+      <div style={{ padding: '64px', textAlign: 'center', color: 'var(--text-main, #374151)' }}>
+        <p style={{ color: 'var(--text-muted, #6b7280)' }}>Loading profile...</p>
+      </div>
+    );
+  }
+
+  // Define display data with safe fallbacks
+  const displayName = profileUser?.fullName || authUser?.fullName || "Campus User";
+  const userEmail = profileUser?.collegeEmail || authUser?.collegeEmail || "hidden@campus.edu";
+  const userRating = profileUser?.lenderRating || 4.9;
+  const userReviewsCount = profileUser?.ratingsCount || 0;
+  const itemsLent = profileUser?.listings?.length || 0;
+  const itemsBorrowed = profileUser?.borrowingCount || 0;
+  const pickupZones = profileUser?.preferredPickupZones || ["General Campus Area"];
+  const userIdForShare = profileUser?.id || authUser?.id || "";
 
   const handleShareProfile = () => {
     const profileUrl = `${window.location.origin}/user/${userIdForShare}`;

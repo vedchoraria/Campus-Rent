@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import ItemCard from "../components/ItemCard.jsx";
-import mockData from "../data/mockData.js";
+import { useListings } from "../context/ListingContext.jsx";
 
 const dynamicWords = ["Classmates.", "Friends.", "Dorm Neighbors.", "Study Groups."];
 
 function Landing() {
   const [wordIndex, setWordIndex] = useState(0);
+  const { marketplaceListings, isLoading } = useListings();
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -199,9 +200,19 @@ function Landing() {
           <p>Highly rated gear from students you can trust.</p>
         </div>
         <div className="grid four">
-          {mockData.slice(0, 4).map((item) => (
-            <ItemCard key={item.id} item={item} />
-          ))}
+          {isLoading
+            ? Array.from({ length: 4 }).map((_, index) => (
+                <div key={index} className="marketplace-card skeleton">
+                  <div style={{ height: "170px" }}></div>
+                  <div className="marketplace-card-body">
+                    <div className="skeleton" style={{ height: "20px", width: "80%", marginBottom: "8px" }}></div>
+                    <div className="skeleton" style={{ height: "16px", width: "50%" }}></div>
+                  </div>
+                </div>
+              ))
+            : marketplaceListings.slice(0, 4).map((item) => (
+                <ItemCard key={item.id} item={item} />
+              ))}
         </div>
       </section>
 

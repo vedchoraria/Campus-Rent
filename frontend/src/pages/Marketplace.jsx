@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 
 const categories = [
-  { name: "All", count: 45 },
-  { name: "Tech", count: 24 },
-  { name: "Books", count: 18 },
-  { name: "Adventure", count: 12 },
-  { name: "Sports", count: 9 },
+  { name: "All" },
+  { name: "Tech" },
+  { name: "Books" },
+  { name: "Adventure" },
+  { name: "Sports" },
 ];
 
 const locations = [
@@ -156,7 +156,6 @@ function Marketplace() {
                   }`}
                 >
                   <span>{cat.name}</span>
-                  <span className="marketplace-count">{cat.count}</span>
                 </button>
               ))}
             </div>

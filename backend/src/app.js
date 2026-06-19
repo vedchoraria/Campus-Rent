@@ -5,6 +5,7 @@ import listingRoutes from './routes/listingRoutes.js';
 import bookingRoutes from './routes/bookingRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import userRoutes from './routes/userRoutes.js';
 import { corsOptions } from './config/cors.js';
 import requestContext from './middleware/requestContext.js';
 import errorMiddleware, { notFoundHandler } from './middleware/errorMiddleware.js';
@@ -65,6 +66,7 @@ app.use('/api/listings', listingRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/users', userRoutes);
 
 // --- Error handling (must be last) ---
 

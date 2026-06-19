@@ -210,9 +210,9 @@ function MyListings() {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "16px" }}>
         {[
-          { label: "Total Revenue", value: "Rs 48,200" },
-          { label: "Active Rentals", value: "3" },
-          { label: "Lender Rating", value: "4.9" },
+          { label: "Active Listings", value: String(myListings.filter(l => !l.isHidden).length) },
+          { label: "Pending Approvals", value: String(approvals.length) },
+          { label: "History Records", value: String(history.length) },
         ].map((stat) => (
           <div
             key={stat.label}
