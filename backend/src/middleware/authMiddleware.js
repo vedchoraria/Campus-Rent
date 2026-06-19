@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/node';
 import jwt from 'jsonwebtoken';
 import prisma from '../utils/prismaClient.js';
 import logger from '../utils/logger.js';
@@ -59,7 +60,9 @@ export const requireAuth = async (req, res, next) => {
       });
     }
 
+    // Attach authenticated user to Sentry scope for error correlation
     req.user = user;
+    Sentry.setUser({ id: user.id, role: user.role });
     next();
   } catch (error) {
     logger.warn({ err: error, requestId: req.requestId }, 'Unauthorized access attempt: invalid or expired token');

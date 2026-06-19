@@ -20,6 +20,7 @@
   "description": "",
   "dependencies": {
     "@prisma/client": "^5.22.0",
+    "@sentry/node": "^10.59.0",
     "bcrypt": "^6.0.0",
     "cloudinary": "^2.10.0",
     "cors": "^2.8.6",

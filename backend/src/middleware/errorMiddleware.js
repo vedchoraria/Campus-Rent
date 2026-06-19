@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/node';
 import logger from '../utils/logger.js';
 import { AppError } from '../utils/AppError.js';
 
@@ -12,6 +13,26 @@ const errorMiddleware = (err, req, res, _next) => {
     : isProduction
       ? 'Internal server error.'
       : err.message || 'Internal server error.';
+
+  // Capture 5xx errors in Sentry with enriched context
+  if (statusCode >= 500) {
+    Sentry.withScope((scope) => {
+      scope.setTag('request_id', requestId);
+      scope.setTag('is_operational', String(isOperational));
+      scope.setTag('status_code', String(statusCode));
+      if (req?.user?.id) {
+        scope.setUser({ id: req.user.id });
+      }
+      if (req?.method) {
+        scope.setTag('method', req.method);
+      }
+      if (req?.url) {
+        scope.setTag('url', req.url);
+      }
+      scope.setLevel('error');
+      Sentry.captureException(err);
+    });
+  }
 
   const logFn = statusCode >= 500 ? 'error' : 'warn';
   logger[logFn](

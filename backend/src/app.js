@@ -8,11 +8,15 @@ import authRoutes from './routes/authRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import { corsOptions } from './config/cors.js';
+import Sentry, { initSentry } from './config/sentry.js';
 import requestContext from './middleware/requestContext.js';
 import errorMiddleware, { notFoundHandler } from './middleware/errorMiddleware.js';
 import logger from './utils/logger.js';
 import prisma from './utils/prismaClient.js';
 import apiSpec from './config/swagger.js';
+
+// Initialize Sentry (safe no-op if DSN not configured)
+initSentry();
 
 const app = express();
 
@@ -84,10 +88,13 @@ app.use('/api/users', userRoutes);
 
 // --- Error handling (must be last) ---
 
-// 404 handler for unknown routes
-app.use(notFoundHandler);
+// Sentry Express error handler — catches unhandled errors from async route handlers
+Sentry.setupExpressErrorHandler(app);
 
 // Global error handler
 app.use(errorMiddleware);
+
+// 404 handler for unknown routes (must be after all error handlers)
+app.use(notFoundHandler);
 
 export default app;
