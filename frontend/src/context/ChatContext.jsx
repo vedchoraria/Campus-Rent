@@ -14,6 +14,7 @@ export function ChatProvider({ children }) {
   const [hasMore, setHasMore] = useState(false);
   const [nextCursor, setNextCursor] = useState(null);
   const [unreadCounts, setUnreadCounts] = useState({});
+  const [typingUsers, setTypingUsers] = useState({});
 
   // Use refs to avoid stale closures in socket event handlers
   const activeConversationIdRef = useRef(activeConversationId);
@@ -91,6 +92,17 @@ export function ChatProvider({ children }) {
       }));
     };
 
+    const handleTypingUpdate = ({ conversationId, userId, isTyping }) => {
+      setTypingUsers((prev) => {
+        if (!isTyping) {
+          const next = { ...prev };
+          delete next[conversationId];
+          return next;
+        }
+        return { ...prev, [conversationId]: userId };
+      });
+    };
+
     const handleError = (error) => {
       console.error('[Chat] Socket error:', error.message);
     };
@@ -98,12 +110,14 @@ export function ChatProvider({ children }) {
     onChatEvent('message:new', handleNewMessage);
     onChatEvent('conversation:new', handleNewConversation);
     onChatEvent('unread', handleUnread);
+    onChatEvent('typing:update', handleTypingUpdate);
     onChatEvent('error', handleError);
 
     return () => {
       offChatEvent('message:new');
       offChatEvent('conversation:new');
       offChatEvent('unread');
+      offChatEvent('typing:update');
       offChatEvent('error');
     };
   }, []);
@@ -175,6 +189,7 @@ export function ChatProvider({ children }) {
       isLoading,
       hasMore,
       unreadCounts,
+      typingUsers,
       selectConversation,
       loadOlderMessages,
       refreshConversations
@@ -187,6 +202,7 @@ export function ChatProvider({ children }) {
       isLoading,
       hasMore,
       unreadCounts,
+      typingUsers,
       selectConversation,
       loadOlderMessages,
       refreshConversations

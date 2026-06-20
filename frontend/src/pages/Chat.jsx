@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useChat } from "../context/ChatContext.jsx";
-import { sendMessage, joinConversation, leaveConversation } from "../services/chat.js";
+import { sendMessage, joinConversation, leaveConversation, emitTypingStart, emitTypingStop } from "../services/chat.js";
 
 const formatTime = (dateStr) => {
   if (!dateStr) return "";
@@ -20,6 +20,11 @@ const formatDate = (dateStr) => {
   return date.toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
 };
 
+// Debounce threshold for emitting typing:start (don't re-emit within this window)
+const TYPING_DEBOUNCE_MS = 2000;
+// Inactivity timeout for auto-stopping typing on the client side
+const TYPING_INACTIVITY_MS = 3000;
+
 function Chat() {
   const {
     conversations,
@@ -29,6 +34,7 @@ function Chat() {
     isLoading,
     hasMore,
     unreadCounts,
+    typingUsers,
     selectConversation,
     loadOlderMessages,
     refreshConversations
@@ -40,6 +46,19 @@ function Chat() {
   const endRef = useRef(null);
   const threadRef = useRef(null);
   const joinedRef = useRef(false);
+
+  // Typing debounce refs
+  const lastTypingEmitRef = useRef(0);
+  const typingInactivityRef = useRef(null);
+
+  // Clean up typing inactivity timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (typingInactivityRef.current) {
+        clearTimeout(typingInactivityRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -69,9 +88,36 @@ function Chat() {
     }
   }, [hasMore, isLoading, loadOlderMessages]);
 
+  // Emit typing:start with debounce: only once per TYPING_DEBOUNCE_MS window
+  // Auto-stops after TYPING_INACTIVITY_MS of inactivity
+  const handleTyping = useCallback(() => {
+    if (!activeConversationId) return;
+
+    const now = Date.now();
+    if (now - lastTypingEmitRef.current > TYPING_DEBOUNCE_MS) {
+      lastTypingEmitRef.current = now;
+      emitTypingStart(activeConversationId).catch(() => {});
+    }
+
+    // Reset inactivity timeout
+    if (typingInactivityRef.current) {
+      clearTimeout(typingInactivityRef.current);
+    }
+    typingInactivityRef.current = setTimeout(() => {
+      emitTypingStop(activeConversationId).catch(() => {});
+    }, TYPING_INACTIVITY_MS);
+  }, [activeConversationId]);
+
   const handleSend = async () => {
     const text = draft.trim();
     if (!text || !activeConversationId || sending) return;
+
+    // Stop typing before sending
+    await emitTypingStop(activeConversationId).catch(() => {});
+    if (typingInactivityRef.current) {
+      clearTimeout(typingInactivityRef.current);
+    }
+    lastTypingEmitRef.current = 0;
 
     setSending(true);
     try {
@@ -89,6 +135,11 @@ function Chat() {
       e.preventDefault();
       handleSend();
     }
+  };
+
+  const handleInputChange = (e) => {
+    setDraft(e.target.value);
+    handleTyping();
   };
 
   const handleSelect = (conversationId) => {
@@ -116,6 +167,9 @@ function Chat() {
     }
     return groups;
   }, [messages]);
+
+  // Determine if the other user is typing in the active conversation
+  const isOtherTyping = activeConversationId && typingUsers[activeConversationId];
 
   return (
     <section className="chat-layout" aria-label="Chat area">
@@ -259,6 +313,12 @@ function Chat() {
             )
           )}
 
+          {isOtherTyping && (
+            <div className="chat-typing-indicator" data-testid="typing-indicator">
+              {activeConversation?.otherUser?.fullName || "User"} is typing...
+            </div>
+          )}
+
           <div ref={endRef} />
         </div>
 
@@ -268,7 +328,7 @@ function Chat() {
             placeholder="Type a message..."
             aria-label="Message input"
             value={draft}
-            onChange={(e) => setDraft(e.target.value)}
+            onChange={handleInputChange}
             onKeyDown={handleKeyDown}
             disabled={!activeConversationId || sending}
           />

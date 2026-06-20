@@ -7,7 +7,6 @@ let listeners = new Map();
 
 /**
  * Initialize the socket connection with the user's JWT token.
- * Should be called once when the user logs in.
  */
 export const connectSocket = (token) => {
   if (socket?.connected) {
@@ -50,6 +49,11 @@ export const connectSocket = (token) => {
     if (handler) handler(data);
   });
 
+  socket.on('typing:update', (data) => {
+    const handler = listeners.get('typing:update');
+    if (handler) handler(data);
+  });
+
   socket.on('error', (data) => {
     const handler = listeners.get('error');
     if (handler) handler(data);
@@ -71,7 +75,6 @@ export const disconnectSocket = () => {
 
 /**
  * Join a conversation room via socket.
- * Returns a promise that resolves with the result.
  */
 export const joinConversation = (conversationId) => {
   return new Promise((resolve, reject) => {
@@ -108,7 +111,6 @@ export const leaveConversation = (conversationId) => {
 
 /**
  * Send a message via socket.
- * Returns a promise that resolves with the server response.
  */
 export const sendMessage = (conversationId, content) => {
   return new Promise((resolve, reject) => {
@@ -126,8 +128,41 @@ export const sendMessage = (conversationId, content) => {
 };
 
 /**
+ * Emit typing:start to the server.
+ * Only emits once per debounce window. Debounce is handled by the caller (Chat.jsx).
+ */
+export const emitTypingStart = (conversationId) => {
+  return new Promise((resolve, reject) => {
+    if (!socket?.connected) return resolve();
+    socket.emit('typing:start', { conversationId }, (response) => {
+      if (response?.error) {
+        reject(new Error(response.message));
+      } else {
+        resolve(response);
+      }
+    });
+  });
+};
+
+/**
+ * Emit typing:stop to the server.
+ */
+export const emitTypingStop = (conversationId) => {
+  return new Promise((resolve, reject) => {
+    if (!socket?.connected) return resolve();
+    socket.emit('typing:stop', { conversationId }, (response) => {
+      if (response?.error) {
+        reject(new Error(response.message));
+      } else {
+        resolve(response);
+      }
+    });
+  });
+};
+
+/**
  * Register a listener for socket events.
- * Events: 'message:new', 'conversation:new', 'unread', 'error'
+ * Events: 'message:new', 'conversation:new', 'unread', 'typing:update', 'error'
  */
 export const onChatEvent = (event, handler) => {
   listeners.set(event, handler);
