@@ -23,7 +23,7 @@ export default defineConfig({
         lines: 10,
         functions: 10,
         statements: 10,
-        branches: 10,
+        branches: 10
       }
     },
     testTimeout: 10000,

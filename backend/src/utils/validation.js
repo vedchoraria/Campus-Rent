@@ -13,7 +13,7 @@ const collegeEmailSchema = z
   .toLowerCase()
   .min(1, 'Email is required.')
   .email('Please provide a valid email address.')
-  .refine((email) => email.endsWith('nitrr.ac.in'), {
+  .refine((email) => email.endsWith('@nitrr.ac.in'), {
     message: 'Please use your nitrr.ac.in campus email address.'
   });
 
@@ -40,7 +40,7 @@ export const signupSchema = z.object({
 });
 
 export const loginSchema = z.object({
-  collegeEmail: z.string().trim().toLowerCase().min(1, 'Email is required.'),
+  collegeEmail: collegeEmailSchema,
   password: z.string().min(1, 'Password is required.')
 });
 

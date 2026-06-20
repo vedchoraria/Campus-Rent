@@ -103,40 +103,39 @@ export const createBooking = async (payload) => {
     throw new BookingError('You cannot book your own listing.', 400);
   }
 
-  const overlap = await prisma.booking.findFirst({
-    where: {
-      listingId: listing.id,
-      status: { in: BLOCKING_BOOKING_STATUSES },
-      startDate: { lte: parsedEnd },
-      endDate: { gte: parsedStart }
-    },
-    select: {
-      id: true,
-      startDate: true,
-      endDate: true
-    }
-  });
-
-  if (overlap) {
-    throw new BookingError('Requested dates overlap with an existing booking.', 409);
-  }
-
   const days = Math.floor((parsedEnd.getTime() - parsedStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
   const totalPriceSnapshot = Number((listing.dailyRentalRate * days).toFixed(2));
 
-  const booking = await prisma.booking.create({
-    data: {
-      listingId: listing.id,
-      borrowerId: String(borrowerId),
-      ownerId: listing.ownerId,
-      startDate: parsedStart,
-      endDate: parsedEnd,
-      status: BOOKING_STATUS.requested,
-      totalPriceSnapshot,
-      securityDepositSnapshot: listing.securityDeposit,
-      pickupZone: pickupZone || 'Default Zone',
-      pickupTime: pickupTime ? new Date(pickupTime) : null
+  const booking = await prisma.$transaction(async (tx) => {
+    // Re-check overlap inside the transaction to prevent TOCTOU race condition
+    const overlap = await tx.booking.findFirst({
+      where: {
+        listingId: listing.id,
+        status: { in: BLOCKING_BOOKING_STATUSES },
+        startDate: { lte: parsedEnd },
+        endDate: { gte: parsedStart }
+      },
+      select: { id: true, startDate: true, endDate: true }
+    });
+
+    if (overlap) {
+      throw new BookingError('Requested dates overlap with an existing booking.', 409);
     }
+
+    return tx.booking.create({
+      data: {
+        listingId: listing.id,
+        borrowerId: String(borrowerId),
+        ownerId: listing.ownerId,
+        startDate: parsedStart,
+        endDate: parsedEnd,
+        status: BOOKING_STATUS.requested,
+        totalPriceSnapshot,
+        securityDepositSnapshot: listing.securityDeposit,
+        pickupZone: pickupZone || 'Default Zone',
+        pickupTime: pickupTime ? new Date(pickupTime) : null
+      }
+    });
   });
 
   return booking;
@@ -201,23 +200,30 @@ export const updateBookingStatus = async ({ bookingId, actorId, status }) => {
       throw new BookingError('Only requested bookings can be approved.', 409);
     }
 
-    const conflict = await prisma.booking.findFirst({
-      where: {
-        listingId: booking.listingId,
-        id: { not: booking.id },
-        status: { in: BLOCKING_BOOKING_STATUSES },
-        startDate: { lte: booking.endDate },
-        endDate: { gte: booking.startDate }
-      },
-      select: { id: true }
+    // Check for date overlap and update atomically inside a transaction to prevent TOCTOU race condition
+    const approved = await prisma.$transaction(async (tx) => {
+      const conflict = await tx.booking.findFirst({
+        where: {
+          listingId: booking.listingId,
+          id: { not: booking.id },
+          status: { in: BLOCKING_BOOKING_STATUSES },
+          startDate: { lte: booking.endDate },
+          endDate: { gte: booking.startDate }
+        },
+        select: { id: true }
+      });
+
+      if (conflict) {
+        throw new BookingError('Cannot approve: dates overlap with an existing confirmed booking.', 409);
+      }
+
+      return tx.booking.update({
+        where: { id: booking.id },
+        data: { status: BOOKING_STATUS.approved, approvedAt: now }
+      });
     });
 
-    if (conflict) {
-      throw new BookingError('Cannot approve: dates overlap with an existing confirmed booking.', 409);
-    }
-
-    data.status = BOOKING_STATUS.approved;
-    data.approvedAt = now;
+    return approved;
   } else if (nextStatus === BOOKING_STATUS.itemGiven) {
     if (!isOwner) {
       throw new BookingError('Only the listing owner can mark this booking as item given.', 403);

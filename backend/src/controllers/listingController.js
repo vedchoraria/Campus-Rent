@@ -98,6 +98,14 @@ export const createListing = async (req, res, next) => {
 
 export const uploadListingImage = async (req, res, next) => {
   try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No file provided or file type is not supported. Accepted types: JPEG, PNG, WebP, AVIF, HEIC.',
+        requestId: req.requestId
+      });
+    }
+
     const uploaded = await uploadService.uploadImageToCloudinary(req.file);
 
     res.status(201).json({
@@ -105,6 +113,15 @@ export const uploadListingImage = async (req, res, next) => {
       data: uploaded
     });
   } catch (error) {
+    // Multer errors (file too large, wrong type) are plain Errors — return 400
+    if (error.message && (error.message.includes('Unsupported file type') || error.code === 'LIMIT_FILE_SIZE')) {
+      return res.status(400).json({
+        success: false,
+        message: error.message || 'File upload rejected.',
+        requestId: req.requestId
+      });
+    }
+
     req.log?.error({ err: error }, 'Error uploading listing image');
     next(error);
   }

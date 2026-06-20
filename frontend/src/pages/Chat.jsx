@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 
 const STORAGE_KEY = "campusrent_chat_state";
 
+// Contacts will be populated from backend when chat is implemented
+// const contacts = [];
 const contacts = [];
 
 const getInitialState = () => {

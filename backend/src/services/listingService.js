@@ -243,26 +243,29 @@ export const updateListing = async (listingId, ownerId, payload) => {
 
   const imagesPayload = payload.images;
 
-  if (imagesPayload !== undefined) {
-    await prisma.listingImage.deleteMany({ where: { listingId: listing.id } });
-  }
+  // Wrap image replacement in a transaction to prevent data loss if update fails
+  const updatedListing = await prisma.$transaction(async (tx) => {
+    if (imagesPayload !== undefined) {
+      await tx.listingImage.deleteMany({ where: { listingId: listing.id } });
+    }
 
-  const updatedListing = await prisma.listing.update({
-    where: { id: listing.id },
-    data: {
-      ...updateData,
-      ...(imagesPayload !== undefined
-        ? {
-            images: {
-              create: imagesPayload.map((img, index) => ({
-                imageUrl: img.imageUrl,
-                displayOrder: typeof img.displayOrder === 'number' ? img.displayOrder : index
-              }))
+    return tx.listing.update({
+      where: { id: listing.id },
+      data: {
+        ...updateData,
+        ...(imagesPayload !== undefined
+          ? {
+              images: {
+                create: imagesPayload.map((img, index) => ({
+                  imageUrl: img.imageUrl,
+                  displayOrder: typeof img.displayOrder === 'number' ? img.displayOrder : index
+                }))
+              }
             }
-          }
-        : {})
-    },
-    include: LISTING_INCLUDE
+          : {})
+      },
+      include: LISTING_INCLUDE
+    });
   });
 
   return updatedListing;
