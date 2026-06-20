@@ -169,7 +169,10 @@ function Chat() {
   }, [messages]);
 
   // Determine if the other user is typing in the active conversation
-  const isOtherTyping = activeConversationId && typingUsers[activeConversationId];
+  // Compare against otherUser.id so the current user never sees themselves as typing
+  const isOtherTyping = activeConversationId &&
+    typingUsers[activeConversationId] &&
+    typingUsers[activeConversationId] === activeConversation?.otherUser?.id;
 
   return (
     <section className="chat-layout" aria-label="Chat area">

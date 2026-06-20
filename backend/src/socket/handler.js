@@ -209,7 +209,7 @@ export const registerSocketHandlers = (io) => {
     socket.on('disconnect', (reason) => {
       logger.info({ socketId: socket.id, userId, reason }, 'Socket disconnected');
 
-      // Clean up typing timers for this user
+      // Clean up typing timers for this user and broadcast typing:stop
       for (const [convId, typingData] of typingTimers.entries()) {
         if (typingData[userId]) {
           clearTimeout(typingData[userId]);
@@ -217,6 +217,12 @@ export const registerSocketHandlers = (io) => {
           if (Object.keys(typingData).length === 0) {
             typingTimers.delete(convId);
           }
+          // Notify other participants — they should no longer see a stale indicator
+          io.to(`conv:${convId}`).emit('typing:update', {
+            conversationId: convId,
+            userId,
+            isTyping: false
+          });
         }
       }
 

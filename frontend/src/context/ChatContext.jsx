@@ -147,6 +147,10 @@ export function ChatProvider({ children }) {
 
   // Select a conversation and mark it as read
   const selectConversation = useCallback(async (conversationId) => {
+    // Prune stale typing state when switching to a different conversation
+    if (conversationId !== activeConversationId) {
+      setTypingUsers({});
+    }
     setActiveConversationId(conversationId);
     setMessages([]);
     setNextCursor(null);

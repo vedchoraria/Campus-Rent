@@ -222,4 +222,42 @@ describe('Typing Indicators (Socket.IO)', () => {
       expect(stopData.isTyping).toBe(false);
     }, 10000); // longer timeout for the 3s auto-stop
   });
+
+  describe('disconnect behavior (P1.2)', () => {
+    it('should broadcast typing:update with isTyping=false when user disconnects while typing', async () => {
+      // Create fresh sockets for this test
+      const discOwnerSocket = await createClient(owner.user.id);
+      const discBorrowerSocket = await createClient(borrower.user.id);
+
+      // Both join the conversation room
+      await Promise.all([
+        new Promise((resolve) => discOwnerSocket.emit('conversation:join', { conversationId: conv.id }, resolve)),
+        new Promise((resolve) => discBorrowerSocket.emit('conversation:join', { conversationId: conv.id }, resolve)),
+      ]);
+
+      // Owner emits typing:start
+      await new Promise((resolve) => {
+        discOwnerSocket.emit('typing:start', { conversationId: conv.id }, resolve);
+      });
+
+      // Borrow socket listens for typing:stop
+      const stopPromise = new Promise((resolve) => {
+        discBorrowerSocket.on('typing:update', (data) => {
+          if (!data.isTyping && data.userId === owner.user.id) {
+            resolve(data);
+          }
+        });
+      });
+
+      // Owner disconnects — should trigger typing:stop broadcast
+      discOwnerSocket.close();
+
+      const stopData = await stopPromise;
+      expect(stopData.conversationId).toBe(conv.id);
+      expect(stopData.userId).toBe(owner.user.id);
+      expect(stopData.isTyping).toBe(false);
+
+      discBorrowerSocket.close();
+    }, 10000);
+  });
 });
