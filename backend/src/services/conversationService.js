@@ -9,15 +9,9 @@ class ConversationError extends AppError {
   }
 }
 
-/**
- * Auto-create a conversation when a booking is approved.
- * Accepts an optional transaction client (tx) for when called within
- * an existing Prisma transaction to avoid nested transaction issues.
- */
 export const createConversationForBooking = async (bookingId, ownerId, borrowerId, tx) => {
   const client = tx || prisma;
 
-  // Check if a conversation already exists (idempotency)
   const existing = await client.conversation.findUnique({
     where: { bookingId }
   });
@@ -65,6 +59,52 @@ export const createConversationForBooking = async (bookingId, ownerId, borrowerI
 
   logger.info({ bookingId, conversationId: conversation.id }, 'Conversation auto-created on booking approval');
   return conversation;
+};
+
+/**
+ * Compute the number of unread messages for a user in a conversation.
+ * Counts messages created after lastReadAt that were sent by OTHER users.
+ */
+export const computeUnreadCount = async (conversationId, userId) => {
+  const participant = await prisma.conversationParticipant.findFirst({
+    where: { conversationId, userId },
+    select: { lastReadAt: true }
+  });
+
+  if (!participant) {
+    return 0;
+  }
+
+  const where = {
+    conversationId,
+    senderId: { not: userId }
+  };
+
+  if (participant.lastReadAt) {
+    where.createdAt = { gt: participant.lastReadAt };
+  }
+
+  return prisma.message.count({ where });
+};
+
+/**
+ * Mark a conversation as read by updating the user's lastReadAt timestamp.
+ */
+export const markConversationRead = async (conversationId, userId) => {
+  const participant = await prisma.conversationParticipant.findFirst({
+    where: { conversationId, userId }
+  });
+
+  if (!participant) {
+    throw new ConversationError('You are not a participant in this conversation.', 403);
+  }
+
+  await prisma.conversationParticipant.update({
+    where: { id: participant.id },
+    data: { lastReadAt: new Date() }
+  });
+
+  return { success: true };
 };
 
 export const getMyConversations = async (userId) => {
@@ -127,6 +167,21 @@ export const getMyConversations = async (userId) => {
     }
   });
 
+  // Resolve unread counts via dedicated query (more accurate than filtering last message)
+  const unreadCountPromises = participants
+    .filter((p) => p.conversation)
+    .map((p) =>
+      computeUnreadCount(p.conversationId, userId).then((count) => ({
+        conversationId: p.conversationId,
+        count
+      }))
+    );
+  const unreadCounts = await Promise.all(unreadCountPromises);
+  const unreadMap = {};
+  unreadCounts.forEach(({ conversationId, count }) => {
+    unreadMap[conversationId] = count;
+  });
+
   return participants
     .map((p) => p.conversation)
     .filter(Boolean)
@@ -138,6 +193,7 @@ export const getMyConversations = async (userId) => {
         booking: conv.booking,
         lastMessage: conv.messages[0] || null,
         otherUser: otherParticipant ? otherParticipant.user : null,
+        unreadCount: unreadMap[conv.id] || 0,
         createdAt: conv.createdAt,
         updatedAt: conv.updatedAt
       };
@@ -208,6 +264,16 @@ export const sendMessage = async ({ conversationId, senderId, content }) => {
   return message;
 };
 
+/**
+ * Get all participants of a conversation.
+ */
+export const getConversationParticipants = async (conversationId) => {
+  return prisma.conversationParticipant.findMany({
+    where: { conversationId },
+    select: { userId: true, lastReadAt: true }
+  });
+};
+
 export const isParticipant = async (conversationId, userId) => {
   return participantCheck(conversationId, userId);
 };
@@ -227,5 +293,8 @@ export default {
   getMyConversations,
   getConversationMessages,
   sendMessage,
-  isParticipant
+  isParticipant,
+  computeUnreadCount,
+  markConversationRead,
+  getConversationParticipants
 };

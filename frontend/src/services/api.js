@@ -174,5 +174,9 @@ export const api = {
   getConversationMessages: async (conversationId, cursor, signal) => {
     const params = cursor ? `?cursor=${encodeURIComponent(cursor)}` : "";
     return api.get(`/conversations/${conversationId}/messages${params}`, signal);
+  },
+
+  markConversationRead: async (conversationId) => {
+    return api.patch(`/conversations/${conversationId}/read`);
   }
 };

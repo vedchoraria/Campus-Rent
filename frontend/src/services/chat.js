@@ -35,7 +35,6 @@ export const connectSocket = (token) => {
     console.error('[Chat] Socket connection error:', error.message);
   });
 
-  // Re-attach all registered event listeners on reconnect
   socket.on('message:new', (data) => {
     const handler = listeners.get('message:new');
     if (handler) handler(data);
@@ -43,6 +42,11 @@ export const connectSocket = (token) => {
 
   socket.on('conversation:new', (data) => {
     const handler = listeners.get('conversation:new');
+    if (handler) handler(data);
+  });
+
+  socket.on('unread', (data) => {
+    const handler = listeners.get('unread');
     if (handler) handler(data);
   });
 
@@ -123,7 +127,7 @@ export const sendMessage = (conversationId, content) => {
 
 /**
  * Register a listener for socket events.
- * Events: 'message:new', 'conversation:new', 'error'
+ * Events: 'message:new', 'conversation:new', 'unread', 'error'
  */
 export const onChatEvent = (event, handler) => {
   listeners.set(event, handler);

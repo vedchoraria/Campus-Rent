@@ -13,6 +13,7 @@ export function ChatProvider({ children }) {
   const [isLoading, setIsLoading] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [nextCursor, setNextCursor] = useState(null);
+  const [unreadCounts, setUnreadCounts] = useState({});
 
   // Use refs to avoid stale closures in socket event handlers
   const activeConversationIdRef = useRef(activeConversationId);
@@ -37,7 +38,14 @@ export function ChatProvider({ children }) {
     try {
       const res = await api.getMyConversations();
       if (res.success) {
-        setConversations(res.data || []);
+        const convs = res.data || [];
+        setConversations(convs);
+        // Build unread counts map
+        const counts = {};
+        convs.forEach((c) => {
+          counts[c.id] = c.unreadCount || 0;
+        });
+        setUnreadCounts(counts);
       }
     } catch (err) {
       console.error('Failed to fetch conversations:', err);
@@ -53,11 +61,17 @@ export function ChatProvider({ children }) {
     refreshConversations();
   }, [refreshConversations]);
 
-  // Listen for new messages via socket - stable handlers via refs
+  // Listen for socket events - stable handlers via refs
   useEffect(() => {
     const handleNewMessage = (message) => {
       if (message.conversationId === activeConversationIdRef.current) {
         setMessages((prev) => [...prev, message]);
+      } else {
+        // If not the active conversation, increment unread counter
+        setUnreadCounts((prev) => ({
+          ...prev,
+          [message.conversationId]: (prev[message.conversationId] || 0) + 1
+        }));
       }
       refreshConversationsRef.current();
     };
@@ -70,20 +84,29 @@ export function ChatProvider({ children }) {
       });
     };
 
+    const handleUnread = ({ conversationId, count }) => {
+      setUnreadCounts((prev) => ({
+        ...prev,
+        [conversationId]: count
+      }));
+    };
+
     const handleError = (error) => {
       console.error('[Chat] Socket error:', error.message);
     };
 
     onChatEvent('message:new', handleNewMessage);
     onChatEvent('conversation:new', handleNewConversation);
+    onChatEvent('unread', handleUnread);
     onChatEvent('error', handleError);
 
     return () => {
       offChatEvent('message:new');
       offChatEvent('conversation:new');
+      offChatEvent('unread');
       offChatEvent('error');
     };
-  }, []); // Empty deps - stable because we use refs
+  }, []);
 
   // Fetch messages for a conversation
   const loadMessages = useCallback(async (conversationId, cursor = null) => {
@@ -108,13 +131,25 @@ export function ChatProvider({ children }) {
     }
   }, []);
 
-  // Select a conversation
+  // Select a conversation and mark it as read
   const selectConversation = useCallback(async (conversationId) => {
     setActiveConversationId(conversationId);
     setMessages([]);
     setNextCursor(null);
     setHasMore(false);
+
     if (conversationId) {
+      // Mark conversation as read via API
+      try {
+        await api.markConversationRead(conversationId);
+        setUnreadCounts((prev) => ({
+          ...prev,
+          [conversationId]: 0
+        }));
+      } catch (err) {
+        console.error('Failed to mark conversation as read:', err);
+      }
+
       await loadMessages(conversationId);
     }
   }, [loadMessages]);
@@ -139,6 +174,7 @@ export function ChatProvider({ children }) {
       messages,
       isLoading,
       hasMore,
+      unreadCounts,
       selectConversation,
       loadOlderMessages,
       refreshConversations
@@ -150,6 +186,7 @@ export function ChatProvider({ children }) {
       messages,
       isLoading,
       hasMore,
+      unreadCounts,
       selectConversation,
       loadOlderMessages,
       refreshConversations

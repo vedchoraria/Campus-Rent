@@ -86,6 +86,20 @@ export const registerSocketHandlers = (io) => {
 
         // Broadcast to all participants in the room (including sender for optimistic UI)
         io.to(`conv:${conversationId}`).emit('message:new', message);
+
+        // Compute and emit unread count to the other participant(s)
+        try {
+          const participants = await conversationService.getConversationParticipants(conversationId);
+          for (const p of participants) {
+            if (p.userId !== userId) {
+              const unreadCount = await conversationService.computeUnreadCount(conversationId, p.userId);
+              io.to(`user:${p.userId}`).emit('unread', { conversationId, count: unreadCount });
+            }
+          }
+        } catch (unreadErr) {
+          logger.warn({ err: unreadErr, conversationId }, 'Failed to emit unread counts');
+        }
+
         callback?.({ success: true, data: message });
       } catch (err) {
         logger.error({ err, userId, conversationId }, 'Error sending message');

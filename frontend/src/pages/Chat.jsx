@@ -28,6 +28,7 @@ function Chat() {
     messages,
     isLoading,
     hasMore,
+    unreadCounts,
     selectConversation,
     loadOlderMessages,
     refreshConversations
@@ -40,12 +41,10 @@ function Chat() {
   const threadRef = useRef(null);
   const joinedRef = useRef(false);
 
-  // Auto-scroll to bottom on new messages
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages]);
 
-  // Join/leave socket room when active conversation changes
   useEffect(() => {
     if (activeConversationId) {
       joinedRef.current = true;
@@ -62,7 +61,6 @@ function Chat() {
     };
   }, [activeConversationId]);
 
-  // Infinite scroll for older messages
   const handleScroll = useCallback(() => {
     if (!threadRef.current || !hasMore || isLoading) return;
     const { scrollTop } = threadRef.current;
@@ -86,6 +84,13 @@ function Chat() {
     }
   };
 
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
   const handleSelect = (conversationId) => {
     selectConversation(conversationId);
   };
@@ -98,7 +103,6 @@ function Chat() {
     return name.includes(q) || title.includes(q);
   });
 
-  // Group messages by date
   const groupedMessages = useMemo(() => {
     const groups = [];
     let currentDate = null;
@@ -147,6 +151,7 @@ function Chat() {
                   : lastMsg.content
                 : "No messages yet";
               const otherUser = conv.otherUser;
+              const unread = unreadCounts[conv.id] || 0;
 
               return (
                 <button
@@ -162,11 +167,16 @@ function Chat() {
                     <strong>{otherUser?.fullName || "Unknown User"}</strong>
                     <span className="chat-list-preview">{preview}</span>
                   </div>
-                  {conv.booking?.listing?.title && (
-                    <span className="chat-list-item-label" title={conv.booking.listing.title}>
-                      {conv.booking.listing.title}
-                    </span>
-                  )}
+                  <div className="chat-list-right">
+                    {unread > 0 && (
+                      <span className="chat-unread-badge">{unread}</span>
+                    )}
+                    {conv.booking?.listing?.title && (
+                      <span className="chat-list-item-label" title={conv.booking.listing.title}>
+                        {conv.booking.listing.title}
+                      </span>
+                    )}
+                  </div>
                 </button>
               );
             })
@@ -239,74 +249,40 @@ function Chat() {
             ) : (
               <div
                 key={item.data.id}
-                className={`chat-message ${
-                  item.data.senderId === activeConversation?.otherUser?.id ? "other" : "self"
-                }`}
+                className={`chat-message ${item.data.senderId === activeConversation?.otherUser?.id ? "incoming" : "outgoing"}`}
               >
                 <div className="chat-bubble">
                   <p>{item.data.content}</p>
-                  <span className="chat-bubble-time">{formatTime(item.data.createdAt)}</span>
+                  <span className="chat-time">{formatTime(item.data.createdAt)}</span>
                 </div>
               </div>
             )
           )}
+
           <div ref={endRef} />
         </div>
 
-        <div className="chat-input">
+        <footer className="chat-input-area">
           <input
+            type="text"
+            placeholder="Type a message..."
+            aria-label="Message input"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder="Type your message..."
-            aria-label="Type a message"
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-              }
-            }}
-            disabled={!activeConversationId}
+            onKeyDown={handleKeyDown}
+            disabled={!activeConversationId || sending}
           />
           <button
             type="button"
-            className="chat-send"
+            className="chat-send-btn"
             onClick={handleSend}
             disabled={!draft.trim() || !activeConversationId || sending}
+            aria-label="Send message"
           >
             {sending ? "..." : "Send"}
           </button>
-        </div>
+        </footer>
       </div>
-
-      <aside className="chat-aside">
-        <div className="chat-card">
-          <h4>Safe Meetup Tips</h4>
-          <ol className="chat-tip-list">
-            <li>Meet in public, high-traffic campus locations.</li>
-            <li>Share your meeting time and place with a friend.</li>
-            <li>Inspect the item before finalizing the exchange.</li>
-            <li>Use in-app payments when possible.</li>
-          </ol>
-          <button className="chat-link" type="button">
-            Read Safety Guide
-          </button>
-        </div>
-        {activeConversation && (
-          <div className="chat-card">
-            <h4>Booking Details</h4>
-            <div className="chat-booking-info">
-              <p><strong>Item:</strong> {activeConversation.booking?.listing?.title || "N/A"}</p>
-              <p><strong>Status:</strong> {activeConversation.booking?.status || "N/A"}</p>
-              <p><strong>Dates:</strong> {activeConversation.booking?.startDate
-                ? new Date(activeConversation.booking.startDate).toLocaleDateString()
-                : "N/A"} — {activeConversation.booking?.endDate
-                ? new Date(activeConversation.booking.endDate).toLocaleDateString()
-                : "N/A"}
-              </p>
-            </div>
-          </div>
-        )}
-      </aside>
     </section>
   );
 }
