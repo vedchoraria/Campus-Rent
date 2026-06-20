@@ -1,107 +1,117 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useChat } from "../context/ChatContext.jsx";
+import { sendMessage, joinConversation, leaveConversation } from "../services/chat.js";
 
-const STORAGE_KEY = "campusrent_chat_state";
-
-// Contacts will be populated from backend when chat is implemented
-// const contacts = [];
-const contacts = [];
-
-const getInitialState = () => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) {
-      return {
-        activeId: null,
-        threads: {},
-        unread: {},
-      };
-    }
-
-    const parsed = JSON.parse(stored);
-    return {
-      activeId: parsed.activeId || null,
-      threads: parsed.threads || {},
-      unread: parsed.unread || {},
-    };
-  } catch (error) {
-    return {
-      activeId: null,
-      threads: {},
-      unread: {},
-    };
-  }
+const formatTime = (dateStr) => {
+  if (!dateStr) return "";
+  const date = new Date(dateStr);
+  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 };
 
-const getLastPreview = (thread) => {
-  if (!thread || thread.length === 0) return "No messages yet";
-  const last = thread[thread.length - 1].text || "";
-  return last.length > 42 ? `${last.slice(0, 42)}...` : last;
+const formatDate = (dateStr) => {
+  if (!dateStr) return "";
+  const date = new Date(dateStr);
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  if (date.toDateString() === today.toDateString()) return "Today";
+  if (date.toDateString() === yesterday.toDateString()) return "Yesterday";
+  return date.toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
 };
 
 function Chat() {
-  const initial = useMemo(() => getInitialState(), []);
-  const [activeId, setActiveId] = useState(initial.activeId);
-  const [threads, setThreads] = useState(initial.threads);
-  const [unread, setUnread] = useState(initial.unread);
-  const [search, setSearch] = useState("");
+  const {
+    conversations,
+    activeConversation,
+    activeConversationId,
+    messages,
+    isLoading,
+    hasMore,
+    selectConversation,
+    loadOlderMessages,
+    refreshConversations
+  } = useChat();
+
   const [draft, setDraft] = useState("");
-
-  const activeContact = useMemo(
-    () => contacts.find((contact) => contact.id === activeId) || null,
-    [activeId]
-  );
-
-  const [enterId, setEnterId] = useState(null);
+  const [search, setSearch] = useState("");
+  const [sending, setSending] = useState(false);
   const endRef = useRef(null);
+  const threadRef = useRef(null);
+  const joinedRef = useRef(false);
 
-  const activeMessages = (activeId && threads[activeId]) || [];
-
+  // Auto-scroll to bottom on new messages
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [activeMessages]);
+  }, [messages]);
 
+  // Join/leave socket room when active conversation changes
   useEffect(() => {
-    const payload = JSON.stringify({ activeId, threads, unread });
-    localStorage.setItem(STORAGE_KEY, payload);
-  }, [activeId, threads, unread]);
+    if (activeConversationId) {
+      joinedRef.current = true;
+      joinConversation(activeConversationId).catch((err) => {
+        console.error("Failed to join conversation:", err);
+      });
+    }
 
-  const sendMessage = () => {
+    return () => {
+      if (activeConversationId && joinedRef.current) {
+        leaveConversation(activeConversationId).catch(() => {});
+        joinedRef.current = false;
+      }
+    };
+  }, [activeConversationId]);
+
+  // Infinite scroll for older messages
+  const handleScroll = useCallback(() => {
+    if (!threadRef.current || !hasMore || isLoading) return;
+    const { scrollTop } = threadRef.current;
+    if (scrollTop < 100) {
+      loadOlderMessages();
+    }
+  }, [hasMore, isLoading, loadOlderMessages]);
+
+  const handleSend = async () => {
     const text = draft.trim();
-    if (!text || !activeId) return;
+    if (!text || !activeConversationId || sending) return;
 
-    const newId = `m_${Date.now()}`;
-    const next = [
-      ...activeMessages,
-      {
-        id: newId,
-        sender: "me",
-        text,
-      },
-    ];
-
-    setThreads((prev) => ({
-      ...prev,
-      [activeId]: next,
-    }));
-    setDraft("");
-    setEnterId(newId);
-
-    window.setTimeout(() => {
-      setEnterId((current) => (current === newId ? null : current));
-    }, 450);
+    setSending(true);
+    try {
+      await sendMessage(activeConversationId, text);
+      setDraft("");
+    } catch (err) {
+      console.error("Failed to send message:", err);
+    } finally {
+      setSending(false);
+    }
   };
 
-  const handleSelect = (contactId) => {
-    setActiveId(contactId);
-    setUnread((prev) => ({
-      ...prev,
-      [contactId]: 0,
-    }));
+  const handleSelect = (conversationId) => {
+    selectConversation(conversationId);
   };
 
-  const filteredContacts = contacts.filter((contact) =>
-    contact.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredConversations = conversations.filter((conv) => {
+    if (!search) return true;
+    const name = conv.otherUser?.fullName?.toLowerCase() || "";
+    const title = conv.booking?.listing?.title?.toLowerCase() || "";
+    const q = search.toLowerCase();
+    return name.includes(q) || title.includes(q);
+  });
+
+  // Group messages by date
+  const groupedMessages = useMemo(() => {
+    const groups = [];
+    let currentDate = null;
+    for (const msg of messages) {
+      const msgDate = formatDate(msg.createdAt);
+      if (msgDate !== currentDate) {
+        currentDate = msgDate;
+        groups.push({ type: "date", label: msgDate });
+      }
+      groups.push({ type: "message", data: msg });
+    }
+    return groups;
+  }, [messages]);
 
   return (
     <section className="chat-layout" aria-label="Chat area">
@@ -111,9 +121,6 @@ function Chat() {
             <p className="eyebrow">Messages</p>
             <h3>Campus Chat</h3>
           </div>
-          <button className="chat-action" type="button" aria-label="New message">
-            +
-          </button>
         </div>
         <div className="chat-search">
           <input
@@ -121,34 +128,45 @@ function Chat() {
             placeholder="Search conversations..."
             aria-label="Search conversations"
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(e) => setSearch(e.target.value)}
           />
         </div>
         <div className="chat-list">
-          {filteredContacts.length === 0 ? (
-            <div className="chat-empty">No conversations yet. Start a booking to begin chatting.</div>
+          {filteredConversations.length === 0 ? (
+            <div className="chat-empty">
+              {search
+                ? "No conversations match your search."
+                : "No conversations yet. Start a booking to begin chatting."}
+            </div>
           ) : (
-            filteredContacts.map((contact) => {
-              const preview = getLastPreview(threads[contact.id]);
-              const unreadCount = unread[contact.id] || 0;
+            filteredConversations.map((conv) => {
+              const lastMsg = conv.lastMessage;
+              const preview = lastMsg
+                ? lastMsg.content.length > 42
+                  ? `${lastMsg.content.slice(0, 42)}...`
+                  : lastMsg.content
+                : "No messages yet";
+              const otherUser = conv.otherUser;
 
               return (
                 <button
-                  key={contact.id}
+                  key={conv.id}
                   type="button"
-                  className={`chat-list-item ${
-                    contact.id === activeId ? "active" : ""
-                  }`}
-                  onClick={() => handleSelect(contact.id)}
+                  className={`chat-list-item ${conv.id === activeConversationId ? "active" : ""}`}
+                  onClick={() => handleSelect(conv.id)}
                 >
-                  <span className="chat-avatar">{contact.name[0]}</span>
+                  <span className="chat-avatar">
+                    {otherUser?.fullName?.[0] || "?"}
+                  </span>
                   <div className="chat-list-meta">
-                    <strong>{contact.name}</strong>
+                    <strong>{otherUser?.fullName || "Unknown User"}</strong>
                     <span className="chat-list-preview">{preview}</span>
                   </div>
-                  {unreadCount > 0 ? (
-                    <span className="chat-unread">{unreadCount}</span>
-                  ) : null}
+                  {conv.booking?.listing?.title && (
+                    <span className="chat-list-item-label" title={conv.booking.listing.title}>
+                      {conv.booking.listing.title}
+                    </span>
+                  )}
                 </button>
               );
             })
@@ -158,14 +176,18 @@ function Chat() {
 
       <div className="chat-main">
         <header className="chat-header">
-          {activeContact ? (
+          {activeConversation ? (
             <div className="chat-user">
               <span className="chat-avatar large">
-                {activeContact.name[0]}
+                {activeConversation.otherUser?.fullName?.[0] || "?"}
               </span>
               <div>
-                <strong>{activeContact.name}</strong>
-                <span className="chat-status">{activeContact.status}</span>
+                <strong>{activeConversation.otherUser?.fullName || "Unknown User"}</strong>
+                {activeConversation.booking?.listing?.title && (
+                  <span className="chat-status">
+                    Renting: {activeConversation.booking.listing.title}
+                  </span>
+                )}
               </div>
             </div>
           ) : (
@@ -175,57 +197,83 @@ function Chat() {
               </div>
             </div>
           )}
-          <div className="chat-header-actions">
-            <button type="button" aria-label="Call">
-              Call
-            </button>
-            <button type="button" aria-label="More options">
-              More
-            </button>
-          </div>
         </header>
 
-        <div className="chat-thread" role="log" aria-live="polite">
-          <div className="chat-day">Today</div>
-          {activeMessages.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--muted)' }}>
-              <p>No messages yet. Select a conversation to start chatting.</p>
+        <div
+          className="chat-thread"
+          ref={threadRef}
+          onScroll={handleScroll}
+          role="log"
+          aria-live="polite"
+        >
+          {isLoading && messages.length === 0 && (
+            <div style={{ textAlign: "center", padding: "20px", color: "var(--muted)" }}>
+              Loading messages...
             </div>
           )}
-          {activeMessages.map((m) => (
-            <div
-              key={m.id}
-              className={`chat-message ${m.sender} ${
-                m.id === enterId ? "chat-message--enter" : ""
-              }`}
-            >
-              <div className="chat-bubble">{m.text}</div>
+
+          {hasMore && (
+            <div style={{ textAlign: "center", padding: "10px" }}>
+              <button
+                type="button"
+                className="chat-link"
+                onClick={loadOlderMessages}
+                disabled={isLoading}
+              >
+                {isLoading ? "Loading..." : "Load older messages"}
+              </button>
             </div>
-          ))}
-          {activeContact && <div className="chat-pill">{activeContact.badge}</div>}
+          )}
+
+          {!isLoading && messages.length === 0 && activeConversation && (
+            <div style={{ textAlign: "center", padding: "40px 20px", color: "var(--muted)" }}>
+              <p>No messages yet. Start the conversation!</p>
+            </div>
+          )}
+
+          {groupedMessages.map((item, idx) =>
+            item.type === "date" ? (
+              <div key={`date-${idx}`} className="chat-day">
+                {item.label}
+              </div>
+            ) : (
+              <div
+                key={item.data.id}
+                className={`chat-message ${
+                  item.data.senderId === activeConversation?.otherUser?.id ? "other" : "self"
+                }`}
+              >
+                <div className="chat-bubble">
+                  <p>{item.data.content}</p>
+                  <span className="chat-bubble-time">{formatTime(item.data.createdAt)}</span>
+                </div>
+              </div>
+            )
+          )}
           <div ref={endRef} />
         </div>
 
         <div className="chat-input">
-          <button type="button" className="chat-attach" aria-label="Add attachment">
-            +
-          </button>
           <input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             placeholder="Type your message..."
             aria-label="Type a message"
             onKeyDown={(e) => {
-              if (e.key === "Enter") sendMessage();
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
             }}
+            disabled={!activeConversationId}
           />
           <button
             type="button"
             className="chat-send"
-            onClick={sendMessage}
-            disabled={!draft.trim() || !activeId}
+            onClick={handleSend}
+            disabled={!draft.trim() || !activeConversationId || sending}
           >
-            Send
+            {sending ? "..." : "Send"}
           </button>
         </div>
       </div>
@@ -243,6 +291,21 @@ function Chat() {
             Read Safety Guide
           </button>
         </div>
+        {activeConversation && (
+          <div className="chat-card">
+            <h4>Booking Details</h4>
+            <div className="chat-booking-info">
+              <p><strong>Item:</strong> {activeConversation.booking?.listing?.title || "N/A"}</p>
+              <p><strong>Status:</strong> {activeConversation.booking?.status || "N/A"}</p>
+              <p><strong>Dates:</strong> {activeConversation.booking?.startDate
+                ? new Date(activeConversation.booking.startDate).toLocaleDateString()
+                : "N/A"} — {activeConversation.booking?.endDate
+                ? new Date(activeConversation.booking.endDate).toLocaleDateString()
+                : "N/A"}
+              </p>
+            </div>
+          </div>
+        )}
       </aside>
     </section>
   );

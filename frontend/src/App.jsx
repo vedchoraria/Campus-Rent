@@ -15,6 +15,7 @@ import Signup from "./pages/Signup.jsx";
 import DashboardLayout from "./components/DashboardLayout.jsx";
 import Profile from "./pages/Profile.jsx";
 import MyListings from "./pages/MyListings.jsx";
+import { ChatProvider } from "./context/ChatContext.jsx";
 
 function ProtectedRoute({ children }) {
   const { user } = useAuth();
@@ -41,7 +42,7 @@ function App() {
             <Route path="/add" element={<ProtectedRoute><AddListing /></ProtectedRoute>} />
             <Route path="/booking/:id" element={<ProtectedRoute><Booking /></ProtectedRoute>} />
             <Route path="/my-bookings" element={<ProtectedRoute><MyBookings /></ProtectedRoute>} />
-            <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
+            <Route path="/chat" element={<ProtectedRoute><ChatProvider><Chat /></ChatProvider></ProtectedRoute>} />
             <Route path="/user/:id" element={<Profile />} />
 
             <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>

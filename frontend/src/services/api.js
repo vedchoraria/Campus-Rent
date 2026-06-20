@@ -164,5 +164,15 @@ export const api = {
 
   login: async (payload) => {
     return api.post("/auth/login", payload);
+  },
+
+  // ── Conversations ──────────────────────────────────────────────
+  getMyConversations: async (signal) => {
+    return api.get("/conversations", signal);
+  },
+
+  getConversationMessages: async (conversationId, cursor, signal) => {
+    const params = cursor ? `?cursor=${encodeURIComponent(cursor)}` : "";
+    return api.get(`/conversations/${conversationId}/messages${params}`, signal);
   }
 };

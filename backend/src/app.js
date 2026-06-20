@@ -7,6 +7,7 @@ import bookingRoutes from './routes/bookingRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import userRoutes from './routes/userRoutes.js';
+import conversationRoutes from './routes/conversationRoutes.js';
 import { corsOptions } from './config/cors.js';
 import Sentry, { initSentry } from './config/sentry.js';
 import requestContext from './middleware/requestContext.js';
@@ -85,6 +86,7 @@ app.use('/api/bookings', bookingRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/conversations', conversationRoutes);
 
 // --- Error handling (must be last) ---
 

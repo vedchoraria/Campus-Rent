@@ -1,0 +1,142 @@
+import { io } from 'socket.io-client';
+
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+
+let socket = null;
+let listeners = new Map();
+
+/**
+ * Initialize the socket connection with the user's JWT token.
+ * Should be called once when the user logs in.
+ */
+export const connectSocket = (token) => {
+  if (socket?.connected) {
+    return socket;
+  }
+
+  socket = io(SOCKET_URL, {
+    auth: { token },
+    transports: ['websocket', 'polling'],
+    reconnection: true,
+    reconnectionAttempts: 10,
+    reconnectionDelay: 1000,
+    reconnectionDelayMax: 5000
+  });
+
+  socket.on('connect', () => {
+    console.log('[Chat] Socket connected:', socket.id);
+  });
+
+  socket.on('disconnect', (reason) => {
+    console.log('[Chat] Socket disconnected:', reason);
+  });
+
+  socket.on('connect_error', (error) => {
+    console.error('[Chat] Socket connection error:', error.message);
+  });
+
+  // Re-attach all registered event listeners on reconnect
+  socket.on('message:new', (data) => {
+    const handler = listeners.get('message:new');
+    if (handler) handler(data);
+  });
+
+  socket.on('conversation:new', (data) => {
+    const handler = listeners.get('conversation:new');
+    if (handler) handler(data);
+  });
+
+  socket.on('error', (data) => {
+    const handler = listeners.get('error');
+    if (handler) handler(data);
+  });
+
+  return socket;
+};
+
+/**
+ * Disconnect the socket. Should be called on logout.
+ */
+export const disconnectSocket = () => {
+  if (socket) {
+    socket.disconnect();
+    socket = null;
+  }
+  listeners.clear();
+};
+
+/**
+ * Join a conversation room via socket.
+ * Returns a promise that resolves with the result.
+ */
+export const joinConversation = (conversationId) => {
+  return new Promise((resolve, reject) => {
+    if (!socket?.connected) {
+      return reject(new Error('Socket not connected'));
+    }
+    socket.emit('conversation:join', { conversationId }, (response) => {
+      if (response?.error) {
+        reject(new Error(response.message));
+      } else {
+        resolve(response);
+      }
+    });
+  });
+};
+
+/**
+ * Leave a conversation room.
+ */
+export const leaveConversation = (conversationId) => {
+  return new Promise((resolve, reject) => {
+    if (!socket?.connected) {
+      return reject(new Error('Socket not connected'));
+    }
+    socket.emit('conversation:leave', { conversationId }, (response) => {
+      if (response?.error) {
+        reject(new Error(response.message));
+      } else {
+        resolve(response);
+      }
+    });
+  });
+};
+
+/**
+ * Send a message via socket.
+ * Returns a promise that resolves with the server response.
+ */
+export const sendMessage = (conversationId, content) => {
+  return new Promise((resolve, reject) => {
+    if (!socket?.connected) {
+      return reject(new Error('Socket not connected'));
+    }
+    socket.emit('message:send', { conversationId, content }, (response) => {
+      if (response?.error) {
+        reject(new Error(response.message));
+      } else {
+        resolve(response.data);
+      }
+    });
+  });
+};
+
+/**
+ * Register a listener for socket events.
+ * Events: 'message:new', 'conversation:new', 'error'
+ */
+export const onChatEvent = (event, handler) => {
+  listeners.set(event, handler);
+};
+
+/**
+ * Remove a listener.
+ */
+export const offChatEvent = (event) => {
+  listeners.delete(event);
+};
+
+/**
+ * Get the underlying socket instance.
+ */
+export const getSocket = () => socket;

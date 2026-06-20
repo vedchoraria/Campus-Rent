@@ -1,6 +1,7 @@
 import prisma from '../utils/prismaClient.js';
 import { AppError } from '../utils/AppError.js';
 import logger from '../utils/logger.js';
+import * as conversationService from './conversationService.js';
 
 class BookingError extends AppError {
   constructor(message, statusCode) {
@@ -107,7 +108,6 @@ export const createBooking = async (payload) => {
   const totalPriceSnapshot = Number((listing.dailyRentalRate * days).toFixed(2));
 
   const booking = await prisma.$transaction(async (tx) => {
-    // Re-check overlap inside the transaction to prevent TOCTOU race condition
     const overlap = await tx.booking.findFirst({
       where: {
         listingId: listing.id,
@@ -200,7 +200,6 @@ export const updateBookingStatus = async ({ bookingId, actorId, status }) => {
       throw new BookingError('Only requested bookings can be approved.', 409);
     }
 
-    // Check for date overlap and update atomically inside a transaction to prevent TOCTOU race condition
     const approved = await prisma.$transaction(async (tx) => {
       const conflict = await tx.booking.findFirst({
         where: {
@@ -217,10 +216,20 @@ export const updateBookingStatus = async ({ bookingId, actorId, status }) => {
         throw new BookingError('Cannot approve: dates overlap with an existing confirmed booking.', 409);
       }
 
-      return tx.booking.update({
+      const updated = await tx.booking.update({
         where: { id: booking.id },
         data: { status: BOOKING_STATUS.approved, approvedAt: now }
       });
+
+      // Auto-create conversation, reusing the same transaction client
+      await conversationService.createConversationForBooking(
+        booking.id,
+        booking.ownerId,
+        booking.borrowerId,
+        tx
+      );
+
+      return updated;
     });
 
     return approved;
