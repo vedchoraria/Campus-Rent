@@ -5,14 +5,14 @@ import { io as Client } from 'socket.io-client';
 import jwt from 'jsonwebtoken';
 import { registerSocketHandlers } from '../src/socket/handler.js';
 import { socketAuth } from '../src/socket/auth.js';
-import { createTestUser, cleanup } from './helpers/setup.js';
+import { createTestUser, createTestListing, createTestBooking, cleanup } from './helpers/setup.js';
 import prisma from '../src/utils/prismaClient.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'test-secret';
 
 describe('Online Presence (Socket.IO)', () => {
   let server, io, clientUrl;
-  let userA, userB, userC;
+  let userA, userB, userC, listing, booking;
   let conv;
 
   beforeAll(async () => {
@@ -20,9 +20,26 @@ describe('Online Presence (Socket.IO)', () => {
     userB = await createTestUser({ fullName: 'Presence B' });
     userC = await createTestUser({ fullName: 'Presence C' });
 
+    listing = await createTestListing({
+      ownerId: userA.user.id,
+      dailyRentalRate: 500,
+      securityDeposit: 2000,
+      retailPrice: 10000,
+    });
+
+    booking = await createTestBooking({
+      listingId: listing.id,
+      borrowerId: userB.user.id,
+      ownerId: userA.user.id,
+      status: 'approved',
+      approvedAt: new Date(),
+      totalPriceSnapshot: 1500,
+      securityDepositSnapshot: 2000,
+    });
+
     conv = await prisma.conversation.create({
       data: {
-        bookingId: 'presence-test-' + Date.now(),
+        bookingId: booking.id,
         participants: {
           create: [
             { userId: userA.user.id },
