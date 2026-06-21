@@ -130,3 +130,45 @@ describe('ChatProvider and useChat', () => {
     expect(typeof useChat).toBe('function');
   });
 });
+
+describe('Online Presence State', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    api.getMyConversations.mockResolvedValue({ success: true, data: [] });
+    api.getConversationMessages.mockResolvedValue({
+      success: true,
+      data: [],
+      hasMore: false,
+      nextCursor: null,
+    });
+  });
+
+  it('should initialize onlineUsers as empty object', () => {
+    function PresenceConsumer() {
+      const { onlineUsers } = useChat();
+      return <div data-testid="presence-keys">{Object.keys(onlineUsers).length}</div>;
+    }
+
+    renderWithProviders(<PresenceConsumer />, {
+      user: { id: 'user-1', fullName: 'Test User' },
+      token: 'test-token',
+    });
+
+    expect(screen.getByTestId('presence-keys').textContent).toBe('0');
+  });
+
+  it('should expose onlineUsers in useChat context', () => {
+    function PresenceConsumer() {
+      const { onlineUsers } = useChat();
+      return <div data-testid="presence-value">{JSON.stringify(onlineUsers)}</div>;
+    }
+
+    renderWithProviders(<PresenceConsumer />, {
+      user: { id: 'user-1', fullName: 'Test User' },
+      token: 'test-token',
+    });
+
+    expect(screen.getByTestId('presence-value').textContent).toBe('{}');
+  });
+});
+

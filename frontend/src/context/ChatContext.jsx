@@ -13,8 +13,10 @@ export function ChatProvider({ children }) {
   const [isLoading, setIsLoading] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [nextCursor, setNextCursor] = useState(null);
+  const [isFetchingConversations, setIsFetchingConversations] = useState(true);
   const [unreadCounts, setUnreadCounts] = useState({});
   const [typingUsers, setTypingUsers] = useState({});
+  const [onlineUsers, setOnlineUsers] = useState({});
 
   // Use refs to avoid stale closures in socket event handlers
   const activeConversationIdRef = useRef(activeConversationId);
@@ -35,7 +37,11 @@ export function ChatProvider({ children }) {
 
   // Fetch conversations
   const refreshConversations = useCallback(async () => {
-    if (!user) return;
+    if (!user) {
+      setIsFetchingConversations(false);
+      return;
+    }
+    setIsFetchingConversations(true);
     try {
       const res = await api.getMyConversations();
       if (res.success) {
@@ -50,6 +56,8 @@ export function ChatProvider({ children }) {
       }
     } catch (err) {
       console.error('Failed to fetch conversations:', err);
+    } finally {
+      setIsFetchingConversations(false);
     }
   }, [user]);
 
@@ -103,6 +111,13 @@ export function ChatProvider({ children }) {
       });
     };
 
+    const handlePresenceUpdate = ({ userId, isOnline }) => {
+      setOnlineUsers((prev) => ({
+        ...prev,
+        [userId]: isOnline
+      }));
+    };
+
     const handleError = (error) => {
       console.error('[Chat] Socket error:', error.message);
     };
@@ -111,6 +126,7 @@ export function ChatProvider({ children }) {
     onChatEvent('conversation:new', handleNewConversation);
     onChatEvent('unread', handleUnread);
     onChatEvent('typing:update', handleTypingUpdate);
+    onChatEvent('presence:update', handlePresenceUpdate);
     onChatEvent('error', handleError);
 
     return () => {
@@ -118,6 +134,7 @@ export function ChatProvider({ children }) {
       offChatEvent('conversation:new');
       offChatEvent('unread');
       offChatEvent('typing:update');
+      offChatEvent('presence:update');
       offChatEvent('error');
     };
   }, []);
@@ -192,8 +209,10 @@ export function ChatProvider({ children }) {
       messages,
       isLoading,
       hasMore,
+      isFetchingConversations,
       unreadCounts,
       typingUsers,
+      onlineUsers,
       selectConversation,
       loadOlderMessages,
       refreshConversations
@@ -205,8 +224,10 @@ export function ChatProvider({ children }) {
       messages,
       isLoading,
       hasMore,
+      isFetchingConversations,
       unreadCounts,
       typingUsers,
+      onlineUsers,
       selectConversation,
       loadOlderMessages,
       refreshConversations

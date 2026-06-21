@@ -59,6 +59,11 @@ export const connectSocket = (token) => {
     if (handler) handler(data);
   });
 
+  socket.on('presence:update', (data) => {
+    const handler = listeners.get('presence:update');
+    if (handler) handler(data);
+  });
+
   return socket;
 };
 
@@ -162,7 +167,7 @@ export const emitTypingStop = (conversationId) => {
 
 /**
  * Register a listener for socket events.
- * Events: 'message:new', 'conversation:new', 'unread', 'typing:update', 'error'
+ * Events: 'message:new', 'conversation:new', 'unread', 'typing:update', 'presence:update', 'error'
  */
 export const onChatEvent = (event, handler) => {
   listeners.set(event, handler);

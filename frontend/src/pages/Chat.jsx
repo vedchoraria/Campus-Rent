@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useChat } from "../context/ChatContext.jsx";
-import { sendMessage, joinConversation, leaveConversation, emitTypingStart, emitTypingStop } from "../services/chat.js";
+import { sendMessage, joinConversation, leaveConversation, emitTypingStart, emitTypingStop, getSocket } from "../services/chat.js";
 
 const formatTime = (dateStr) => {
   if (!dateStr) return "";
@@ -36,8 +36,10 @@ function Chat() {
     messages,
     isLoading,
     hasMore,
+    isFetchingConversations,
     unreadCounts,
     typingUsers,
+    onlineUsers,
     selectConversation,
     loadOlderMessages,
     refreshConversations
@@ -67,16 +69,32 @@ function Chat() {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages]);
 
+  // Join conversation room on selection; re-join on socket (re)connection
   useEffect(() => {
-    if (activeConversationId) {
+    if (!activeConversationId) return;
+
+    const doJoin = () => {
       joinedRef.current = true;
       joinConversation(activeConversationId).catch((err) => {
+        // Benign if socket not yet connected — retried on 'connect' event below
         console.error("Failed to join conversation:", err);
       });
+    };
+
+    const socket = getSocket();
+
+    // If socket is already connected, join immediately
+    if (socket?.connected) {
+      doJoin();
     }
 
+    // Re-join whenever the socket connects (initial connect AND reconnection)
+    const handleConnect = () => doJoin();
+    socket?.on('connect', handleConnect);
+
     return () => {
-      if (activeConversationId && joinedRef.current) {
+      socket?.off('connect', handleConnect);
+      if (joinedRef.current) {
         leaveConversation(activeConversationId).catch(() => {});
         joinedRef.current = false;
       }
@@ -196,7 +214,11 @@ function Chat() {
           />
         </div>
         <div className="chat-list">
-          {filteredConversations.length === 0 ? (
+          {isFetchingConversations ? (
+            <div className="chat-empty">
+              <span style={{ opacity: 0.5 }}>Loading conversations...</span>
+            </div>
+          ) : filteredConversations.length === 0 ? (
             <div className="chat-empty">
               {search
                 ? "No conversations match your search."
@@ -253,6 +275,10 @@ function Chat() {
               </span>
               <div>
                 <strong>{activeConversation.otherUser?.fullName || "Unknown User"}</strong>
+                <span className={`chat-presence ${onlineUsers[activeConversation.otherUser?.id] ? "online" : "offline"}`}>
+                  <span className="chat-presence-dot" />
+                  {onlineUsers[activeConversation.otherUser?.id] ? "Online" : "Offline"}
+                </span>
                 {activeConversation.booking?.listing?.title && (
                   <span className="chat-status">
                     Renting: {activeConversation.booking.listing.title}

@@ -1,4 +1,5 @@
 import conversationService from '../services/conversationService.js';
+import prisma from '../utils/prismaClient.js';
 import logger from '../utils/logger.js';
 
 /**
@@ -28,10 +29,18 @@ export const registerSocketHandlers = (io) => {
     if (!userSockets.has(userId)) {
       userSockets.set(userId, new Set());
     }
+    const wasOffline = !isUserOnline(userId);
     userSockets.get(userId).add(socket.id);
 
     // Join the user to their personal room so we can send targeted events
     socket.join(`user:${userId}`);
+
+    // If user was offline and now has a connection, broadcast presence
+    if (wasOffline) {
+      broadcastPresence(io, userId, true).catch((err) => {
+        logger.error({ err, userId }, 'Failed to broadcast presence:online');
+      });
+    }
 
     // ── conversation:join ──────────────────────────────────────────
     socket.on('conversation:join', async ({ conversationId }, callback) => {
@@ -231,11 +240,47 @@ export const registerSocketHandlers = (io) => {
         sockets.delete(socket.id);
         if (sockets.size === 0) {
           userSockets.delete(userId);
+          // User has no more active connections — broadcast offline
+          broadcastPresence(io, userId, false).catch((err) => {
+            logger.error({ err, userId }, 'Failed to broadcast presence:offline');
+          });
         }
       }
     });
   });
 };
+
+/**
+ * Broadcast presence:update to all users that share a conversation with the given userId.
+ * Queries the database to find conversation partners so presence is only shared
+ * with authorized users (those sharing a conversation).
+ */
+async function broadcastPresence(io, userId, isOnline) {
+  // Find all conversation participant IDs that share a conversation with this user
+  const participants = await prisma.conversationParticipant.findMany({
+    where: { userId },
+    select: {
+      conversation: {
+        select: {
+          participants: {
+            select: { userId: true }
+          }
+        }
+      }
+    }
+  });
+
+  // Collect unique other user IDs to notify
+  const notified = new Set();
+  for (const p of participants) {
+    for (const other of p.conversation.participants) {
+      if (other.userId !== userId && !notified.has(other.userId)) {
+        notified.add(other.userId);
+        io.to(`user:${other.userId}`).emit('presence:update', { userId, isOnline });
+      }
+    }
+  }
+}
 
 /**
  * Check if a user has any active socket connections.

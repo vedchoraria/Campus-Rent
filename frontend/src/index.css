@@ -1170,6 +1170,31 @@ section {
   letter-spacing: 0.6px;
 }
 
+.chat-presence {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.chat-presence.online {
+  color: #10B981;
+}
+
+.chat-presence.offline {
+  color: #9CA3AF;
+}
+
+.chat-presence-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
 .chat-header-actions {
   display: flex;
   gap: 10px;
