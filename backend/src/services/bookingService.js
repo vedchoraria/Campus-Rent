@@ -230,7 +230,7 @@ export const updateBookingStatus = async ({ bookingId, actorId, status }) => {
       );
 
       return updated;
-    });
+    }, { timeout: 15000 });
 
     return approved;
   } else if (nextStatus === BOOKING_STATUS.itemGiven) {

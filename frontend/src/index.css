@@ -797,6 +797,7 @@ section {
 .chat-message {
   display: flex;
   width: 100%;
+  animation: messageSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .chat-message.me {
@@ -809,23 +810,68 @@ section {
 
 .chat-bubble {
   max-width: 78%;
-  padding: 12px 14px;
-  border-radius: 8px 12px 12px 12px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow);
+  padding: 10px 16px;
+  border-radius: 4px 16px 16px 16px;
+  background: #F3F4F6;
+  color: var(--text);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  line-height: 1.5;
+  word-break: break-word;
+  position: relative;
 }
 
 .chat-message.me .chat-bubble {
   background: var(--primary);
-  border-color: var(--primary);
   color: white;
-  border-radius: 12px 8px 12px 12px;
+  border-radius: 16px 4px 16px 16px;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
 }
 
-.chat-message--enter .chat-bubble {
-  animation: messageIn 380ms ease-out both;
-  animation-delay: 50ms;
+.chat-message {
+  display: flex;
+  width: 100%;
+}
+
+.chat-message:last-child .chat-bubble {
+  animation: messageSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.chat-message.me {
+  justify-content: flex-end;
+}
+
+.chat-message.them {
+  justify-content: flex-start;
+}
+
+.chat-bubble {
+  max-width: 78%;
+  padding: 10px 16px;
+  border-radius: 4px 16px 16px 16px;
+  background: #F3F4F6;
+  color: var(--text);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.chat-message.me .chat-bubble {
+  background: var(--primary);
+  color: white;
+  border-radius: 16px 4px 16px 16px;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
+}
+
+.chat-time {
+  display: inline-block;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 4px;
+  line-height: 1;
+}
+
+.chat-message.me .chat-time {
+  color: rgba(255, 255, 255, 0.75);
 }
 
 .chat-composer {
@@ -1169,45 +1215,106 @@ section {
   font-weight: 600;
 }
 
-.chat-input {
+/* --- Chat Input Area (new) --- */
+.chat-input-area {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 14px 18px 18px;
-  background: rgba(90, 103, 244, 0.08);
+  gap: 10px;
+  padding: 14px 18px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
 }
 
-.chat-input input {
+.chat-input-area input {
   flex: 1;
+  border: 1px solid var(--border);
+  background: #F9FAFB;
+  padding: 11px 16px;
+  border-radius: 24px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+
+.chat-input-area input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+}
+
+.chat-input-area input::placeholder {
+  color: #9CA3AF;
+}
+
+.chat-send-btn {
+  padding: 10px 22px;
+  border-radius: 24px;
   border: none;
-  background: white;
-  padding: 12px 14px;
-  border-radius: 999px;
-}
-
-.chat-attach,
-.chat-send {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  border: none;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.chat-attach {
-  background: rgba(90, 103, 244, 0.15);
-  color: var(--primary);
-}
-
-.chat-send {
   background: var(--primary);
   color: white;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 200ms ease, transform 150ms ease;
+  white-space: nowrap;
 }
 
-.chat-send:disabled {
-  opacity: 0.6;
+.chat-send-btn:hover:not(:disabled) {
+  background: var(--teal);
+  transform: translateY(-1px);
+}
+
+.chat-send-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.chat-send-btn:disabled {
+  opacity: 0.5;
   cursor: not-allowed;
+}
+
+.chat-input-area-empty {
+  justify-content: center;
+  padding: 24px 18px;
+}
+
+.chat-empty-state {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.chat-empty-icon {
+  font-size: 20px;
+}
+
+.chat-thread-empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--muted);
+}
+
+.chat-thread-empty-icon {
+  font-size: 36px;
+  display: block;
+  margin-bottom: 12px;
+  opacity: 0.6;
+}
+
+.chat-thread-empty p {
+  font-size: 15px;
+}
+
+@keyframes messageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .chat-aside {

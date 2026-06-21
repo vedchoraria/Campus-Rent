@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useAuth } from "../context/AuthContext.jsx";
 import { useChat } from "../context/ChatContext.jsx";
 import { sendMessage, joinConversation, leaveConversation, emitTypingStart, emitTypingStop } from "../services/chat.js";
 
@@ -26,6 +27,8 @@ const TYPING_DEBOUNCE_MS = 2000;
 const TYPING_INACTIVITY_MS = 3000;
 
 function Chat() {
+  const { user } = useAuth();
+
   const {
     conversations,
     activeConversation,
@@ -293,8 +296,9 @@ function Chat() {
           )}
 
           {!isLoading && messages.length === 0 && activeConversation && (
-            <div style={{ textAlign: "center", padding: "40px 20px", color: "var(--muted)" }}>
-              <p>No messages yet. Start the conversation!</p>
+            <div className="chat-thread-empty">
+              <span className="chat-thread-empty-icon" aria-hidden="true">↔</span>
+              <p>No messages yet. Say hello!</p>
             </div>
           )}
 
@@ -306,7 +310,7 @@ function Chat() {
             ) : (
               <div
                 key={item.data.id}
-                className={`chat-message ${item.data.senderId === activeConversation?.otherUser?.id ? "incoming" : "outgoing"}`}
+                className={`chat-message ${item.data.senderId === user?.id ? "me" : "them"}`}
               >
                 <div className="chat-bubble">
                   <p>{item.data.content}</p>
@@ -325,26 +329,35 @@ function Chat() {
           <div ref={endRef} />
         </div>
 
-        <footer className="chat-input-area">
-          <input
-            type="text"
-            placeholder="Type a message..."
-            aria-label="Message input"
-            value={draft}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            disabled={!activeConversationId || sending}
-          />
-          <button
-            type="button"
-            className="chat-send-btn"
-            onClick={handleSend}
-            disabled={!draft.trim() || !activeConversationId || sending}
-            aria-label="Send message"
-          >
-            {sending ? "..." : "Send"}
-          </button>
-        </footer>
+        {activeConversationId ? (
+          <footer className="chat-input-area">
+            <input
+              type="text"
+              placeholder="Type a message..."
+              aria-label="Message input"
+              value={draft}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
+              disabled={sending}
+            />
+            <button
+              type="button"
+              className="chat-send-btn"
+              onClick={handleSend}
+              disabled={!draft.trim() || sending}
+              aria-label="Send message"
+            >
+              {sending ? "..." : "Send"}
+            </button>
+          </footer>
+        ) : (
+          <footer className="chat-input-area chat-input-area-empty">
+            <div className="chat-empty-state">
+              <span className="chat-empty-icon" aria-hidden="true">✦</span>
+              <p>Select a conversation to start messaging</p>
+            </div>
+          </footer>
+        )}
       </div>
     </section>
   );

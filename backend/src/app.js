@@ -16,8 +16,11 @@ import logger from './utils/logger.js';
 import prisma from './utils/prismaClient.js';
 import apiSpec from './config/swagger.js';
 
+console.log('[STARTUP] Step 0: app.js module loaded (all imports complete)');
+
 // Initialize Sentry (safe no-op if DSN not configured)
 initSentry();
+console.log('[STARTUP] Step 0b: initSentry() completed');
 
 const app = express();
 
