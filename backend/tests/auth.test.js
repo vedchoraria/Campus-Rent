@@ -135,3 +135,44 @@ describe('Auth — POST /api/auth/login', () => {
     expect(res.body.message).toMatch(/invalid credentials/i);
   });
 });
+
+describe('Protected Route Access', () => {
+  it('should return 401 for requests without a token', async () => {
+    const res = await request(app)
+      .get('/api/conversations');
+
+    expect(res.status).toBe(401);
+    expect(res.body.success).toBe(false);
+    expect(res.body.message).toMatch(/token/i);
+  });
+
+  it('should return 401 for invalid/expired tokens', async () => {
+    const res = await request(app)
+      .get('/api/conversations')
+      .set('Authorization', 'Bearer invalid-token-here');
+
+    expect(res.status).toBe(401);
+    expect(res.body.success).toBe(false);
+    expect(res.body.message).toMatch(/invalid|expired/i);
+  });
+
+  it('should return 200 for authenticated requests', async () => {
+    // Login to get a valid token
+    const loginRes = await request(app)
+      .post('/api/auth/login')
+      .send({
+        collegeEmail: TEST_EMAIL,
+        password: TEST_PASSWORD,
+      });
+
+    const token = loginRes.body.data.token;
+    expect(token).toBeDefined();
+
+    const res = await request(app)
+      .get('/api/conversations')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+  });
+});

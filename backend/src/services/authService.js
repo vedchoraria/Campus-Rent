@@ -1,6 +1,5 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { randomUUID } from 'crypto';
 import prisma from '../utils/prismaClient.js';
 import { AppError } from '../utils/AppError.js';
 import logger from '../utils/logger.js';
@@ -53,27 +52,37 @@ export const signup = async ({ fullName, collegeEmail, password }) => {
 
   const normalizedEmail = String(collegeEmail).trim().toLowerCase();
 
-  const existingUsers = await prisma.$queryRaw`
-    SELECT id
-    FROM "User"
-    WHERE "collegeEmail" = ${normalizedEmail}
-    LIMIT 1
-  `;
-  const existingUser = existingUsers[0];
+  const existingUser = await prisma.user.findUnique({
+    where: { collegeEmail: normalizedEmail },
+    select: { id: true }
+  });
 
   if (existingUser) {
     throw new AuthError('An account with this email already exists.', 409);
   }
 
   const passwordHash = await bcrypt.hash(String(password), BCRYPT_ROUNDS);
-  const userId = randomUUID();
 
-  const createdUsers = await prisma.$queryRaw`
-    INSERT INTO "User" ("id", "fullName", "collegeEmail", "passwordHash", "role", "preferredPickupZones", "lenderRating", "ratingsCount", "createdAt", "updatedAt")
-    VALUES (${userId}, ${String(fullName).trim()}, ${normalizedEmail}, ${passwordHash}, 'USER'::"Role", ARRAY[]::text[], 0, 0, NOW(), NOW())
-    RETURNING id, "fullName", "collegeEmail", "role", department, "yearOfStudy", "profileImage"
-  `;
-  const user = createdUsers[0];
+  const user = await prisma.user.create({
+    data: {
+      fullName: String(fullName).trim(),
+      collegeEmail: normalizedEmail,
+      passwordHash,
+      role: 'USER',
+      preferredPickupZones: [],
+      lenderRating: 0,
+      ratingsCount: 0,
+    },
+    select: {
+      id: true,
+      fullName: true,
+      collegeEmail: true,
+      role: true,
+      department: true,
+      yearOfStudy: true,
+      profileImage: true,
+    }
+  });
 
   return {
     token: generateToken(user),
@@ -87,13 +96,19 @@ export const login = async ({ collegeEmail, password }) => {
   }
 
   const normalizedEmail = String(collegeEmail).trim().toLowerCase();
-  const users = await prisma.$queryRaw`
-    SELECT id, "fullName", "collegeEmail", "passwordHash", "role", department, "yearOfStudy", "profileImage"
-    FROM "User"
-    WHERE "collegeEmail" = ${normalizedEmail}
-    LIMIT 1
-  `;
-  const user = users[0];
+  const user = await prisma.user.findUnique({
+    where: { collegeEmail: normalizedEmail },
+    select: {
+      id: true,
+      fullName: true,
+      collegeEmail: true,
+      passwordHash: true,
+      role: true,
+      department: true,
+      yearOfStudy: true,
+      profileImage: true,
+    }
+  });
 
   if (!user) {
     logger.warn({ email: normalizedEmail }, 'Failed login attempt: email not found');
