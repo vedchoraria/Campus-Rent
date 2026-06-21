@@ -9,6 +9,7 @@ import adminRoutes from './routes/adminRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import conversationRoutes from './routes/conversationRoutes.js';
 import { corsOptions } from './config/cors.js';
+import { helmetConfig } from './config/helmet.js';
 import Sentry, { initSentry } from './config/sentry.js';
 import requestContext from './middleware/requestContext.js';
 import errorMiddleware, { notFoundHandler } from './middleware/errorMiddleware.js';
@@ -26,10 +27,13 @@ const app = express();
 
 // --- Middleware chain ---
 
-// 1. CORS
+// 1. Security headers (Helmet) — must be before CORS for preflight compatibility
+app.use(helmetConfig);
+
+// 2. CORS
 app.use(cors(corsOptions));
 
-// 2. Body parsing
+// 3. Body parsing
 app.use(express.json());
 
 // 3. Request correlation ID (must be early so all downstream logs include requestId)
