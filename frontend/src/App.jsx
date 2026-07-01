@@ -15,6 +15,7 @@ import Signup from "./pages/Signup.jsx";
 import DashboardLayout from "./components/DashboardLayout.jsx";
 import Profile from "./pages/Profile.jsx";
 import MyListings from "./pages/MyListings.jsx";
+import NotFound from "./pages/NotFound.jsx";
 import { ChatProvider } from "./context/ChatContext.jsx";
 
 function ProtectedRoute({ children }) {
@@ -50,6 +51,8 @@ function App() {
               <Route path="rentals" element={<MyBookings />} />
               <Route path="listings" element={<MyListings />} />
             </Route>
+
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </div>
       </main>
