@@ -29,7 +29,7 @@ const LISTING_INCLUDE = {
  * Uses case-insensitive matching across title, description, and category.
  */
 export const getActiveListings = async (filters = {}) => {
-  const { q, category, page, limit, sortBy } = filters;
+  const { q, category, page, limit, sortBy, location } = filters;
 
   const where = { status: 'active' };
 
@@ -43,6 +43,10 @@ export const getActiveListings = async (filters = {}) => {
 
   if (category) {
     where.category = { equals: category, mode: 'insensitive' };
+  }
+
+  if (location) {
+    where.preferredPickupZone = { contains: location, mode: 'insensitive' };
   }
 
   // Build dynamic orderBy from sortBy param

@@ -234,54 +234,37 @@ This section tracks known architectural limitations, their impact, and the produ
 ### 8.1. Client-Side Sort and Location Filter Operate on Paginated Results
 
 **Summary:**  
-The Marketplace page applies sorting (Newest, Price, Rating) and location filtering entirely on the client side. Because the backend returns only the current page (default 8 items), these operations run against the paginated subset rather than the full result set.
+The Marketplace page applies location filtering on the client side. Because the backend returns only the current page (default 8 items), location filtering runs against the paginated subset rather than the full result set.
+
+Sorting (Newest, Price, Rating) previously had this same bug but was fixed by moving it server-side in an earlier iteration.
 
 **Impact:**  
-- Sorting by "Price: Low to High" shows the cheapest 8 items on the current page, not the 8 cheapest items overall.
 - Filtering by location only checks the 8 items on the current page — matching items on other pages are never surfaced.
 - Search and category filter are unaffected because they execute server-side, before pagination.
 
 **Root Cause:**  
-The `GET /api/listings` endpoint accepts `q` (text search), `category`, `page`, and `limit` query parameters. It does not support `sort` or `location` parameters. Sort and location were kept client-side to avoid overcomplicating the initial pagination migration, but the introduction of pagination made client-side post-processing incorrect for these two operations.
+The `GET /api/listings` endpoint accepts `q` (text search), `category`, `page`, `limit`, and `sortBy` query parameters. It did not initially support a `location` parameter, so location was kept client-side.
 
 **Production-Scale Solution:**  
-Add server-side sort and location filter support to `GET /api/listings` by accepting `sort` and `location` query parameters and handling them in the Prisma query before pagination:
+Add server-side location filter support to `GET /api/listings` by accepting a `location` query parameter and handling it in the Prisma query before pagination:
 
 ```javascript
-// Example implementation in listingService.js getActiveListings()
-
-if (sort) {
-  switch (sort) {
-    case 'price_asc':
-      orderBy.dailyRentalRate = 'asc';
-      break;
-    case 'price_desc':
-      orderBy.dailyRentalRate = 'desc';
-      break;
-    case 'rating':
-      orderBy.owner = { lenderRating: 'desc' };
-      break;
-    case 'newest':
-    default:
-      orderBy.createdAt = 'desc';
-  }
-}
-
+// In listingService.js getActiveListings()
 if (location) {
   where.preferredPickupZone = { contains: location, mode: 'insensitive' };
 }
 ```
 
-This ensures that sort and location filter are applied to the **entire** result set before the `skip`/`take` pagination window, giving correct results regardless of page number.
+This ensures the location filter is applied to the **entire** result set before the `skip`/`take` pagination window, giving correct results regardless of page number.
 
 **Migration Path:**  
-1. Add `sort` and `location` to the list of accepted query params in the controller.
-2. Map the frontend's `sortOption` values to backend sort keys.
-3. Move the location filter from the `displayListings` useMemo into the API request params.
-4. Remove the client-side sort and location filter from `Marketplace.jsx`.
-5. Verify correctness by asserting that page 1 sorted by price_asc contains the globally cheapest items.
+1. Add `location` to the list of accepted query params in the controller. ✅
+2. Implement server-side `preferredPickupZone` filtering in the service layer. ✅
+3. Pass the `location` param from the frontend's API call. ✅
+4. Remove the client-side location filter from `Marketplace.jsx`. ✅
+5. Verify correctness by asserting that filtering by location on page 1 returns globally matching items. ✅
 
-**Status:**  `Unresolved — tracked as technical debt`
+**Status:**  `Resolved — sort was fixed in a prior iteration; location filter moved server-side in this update`
 
 ---
 

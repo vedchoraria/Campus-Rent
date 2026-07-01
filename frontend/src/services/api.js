@@ -108,6 +108,7 @@ export const api = {
     if (params.page) query.set('page', String(params.page));
     if (params.limit) query.set('limit', String(params.limit));
     if (params.sortBy) query.set('sortBy', params.sortBy);
+    if (params.location) query.set('location', params.location);
     const qs = query.toString();
     return api.get(`/listings${qs ? `?${qs}` : ''}`, signal);
   },

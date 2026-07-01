@@ -60,19 +60,20 @@ function Marketplace() {
     if (activeCategory !== "All") params.category = activeCategory;
     if (sortOption === "Price: Low to High") params.sortBy = "price_asc";
     else if (sortOption === "Rating") params.sortBy = "rating";
+    if (activeLocation !== "All Locations") params.location = activeLocation;
     params.page = page;
     params.limit = PAGE_SIZE;
 
     refreshListings(controller.signal, params);
     return () => controller.abort();
-  }, [debouncedSearch, activeCategory, page, sortOption, refreshListings]);
+  }, [debouncedSearch, activeCategory, activeLocation, page, sortOption, refreshListings]);
 
   // Reset to page 1 when filters change
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch, activeCategory, sortOption]);
+  }, [debouncedSearch, activeCategory, activeLocation, sortOption]);
 
-  // Apply ongoing booking overlays and client-side sort/location filter
+  // Apply ongoing booking overlays (sort and location filter are now server-side)
   const displayListings = useMemo(() => {
     const ongoingByItemId = bookings
       .filter((booking) =>
@@ -87,18 +88,13 @@ function Marketplace() {
         return acc;
       }, {});
 
-    let result = marketplaceListings.filter(item => !item.isHidden);
-
-    // Location filter (client-side since location isn't a backend search param yet)
-    if (activeLocation !== "All Locations") {
-      result = result.filter((item) => item.location === activeLocation);
-    }
-
-    return result.map((item) => ({
-      ...item,
-      rentedUntil: ongoingByItemId[String(item.id)]?.end || null,
-    }));
-  }, [activeLocation, bookings, marketplaceListings]);
+    return marketplaceListings
+      .filter(item => !item.isHidden)
+      .map((item) => ({
+        ...item,
+        rentedUntil: ongoingByItemId[String(item.id)]?.end || null,
+      }));
+  }, [bookings, marketplaceListings]);
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
