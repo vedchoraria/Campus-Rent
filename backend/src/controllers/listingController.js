@@ -8,13 +8,14 @@ import { createListingSchema, updateListingSchema, validate } from '../utils/val
  */
 export const getListings = async (req, res, next) => {
   try {
-    const { q, category, page, limit } = req.query;
+    const { q, category, page, limit, sortBy } = req.query;
 
     const result = await listingService.getActiveListings({
       q: q || undefined,
       category: category || undefined,
       page: page !== undefined ? Number(page) : undefined,
-      limit: limit !== undefined ? Number(limit) : undefined
+      limit: limit !== undefined ? Number(limit) : undefined,
+      sortBy: sortBy || undefined
     });
 
     const { data, pagination } = result;

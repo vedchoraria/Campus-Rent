@@ -58,17 +58,19 @@ function Marketplace() {
     const params = {};
     if (debouncedSearch) params.q = debouncedSearch;
     if (activeCategory !== "All") params.category = activeCategory;
+    if (sortOption === "Price: Low to High") params.sortBy = "price_asc";
+    else if (sortOption === "Rating") params.sortBy = "rating";
     params.page = page;
     params.limit = PAGE_SIZE;
 
     refreshListings(controller.signal, params);
     return () => controller.abort();
-  }, [debouncedSearch, activeCategory, page, refreshListings]);
+  }, [debouncedSearch, activeCategory, page, sortOption, refreshListings]);
 
   // Reset to page 1 when filters change
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch, activeCategory]);
+  }, [debouncedSearch, activeCategory, sortOption]);
 
   // Apply ongoing booking overlays and client-side sort/location filter
   const displayListings = useMemo(() => {
@@ -92,23 +94,11 @@ function Marketplace() {
       result = result.filter((item) => item.location === activeLocation);
     }
 
-    // Sort (client-side)
-    result.sort((a, b) => {
-      if (sortOption === "Newest") {
-        return new Date(b.dateAdded) - new Date(a.dateAdded);
-      } else if (sortOption === "Price: Low to High") {
-        return a.pricePerDay - b.pricePerDay;
-      } else if (sortOption === "Rating") {
-        return b.rating - a.rating;
-      }
-      return 0;
-    });
-
     return result.map((item) => ({
       ...item,
       rentedUntil: ongoingByItemId[String(item.id)]?.end || null,
     }));
-  }, [activeLocation, sortOption, bookings, marketplaceListings]);
+  }, [activeLocation, bookings, marketplaceListings]);
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);

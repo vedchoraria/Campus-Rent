@@ -29,7 +29,7 @@ const LISTING_INCLUDE = {
  * Uses case-insensitive matching across title, description, and category.
  */
 export const getActiveListings = async (filters = {}) => {
-  const { q, category, page, limit } = filters;
+  const { q, category, page, limit, sortBy } = filters;
 
   const where = { status: 'active' };
 
@@ -45,6 +45,16 @@ export const getActiveListings = async (filters = {}) => {
     where.category = { equals: category, mode: 'insensitive' };
   }
 
+  // Build dynamic orderBy from sortBy param
+  let orderBy = { createdAt: 'desc' }; // default
+  if (sortBy === 'price_asc') {
+    orderBy = { dailyRentalRate: 'asc' };
+  } else if (sortBy === 'price_desc') {
+    orderBy = { dailyRentalRate: 'desc' };
+  } else if (sortBy === 'rating') {
+    orderBy = { owner: { lenderRating: 'desc' } };
+  }
+
   const hasPagination = page !== undefined && page !== null &&
                         limit !== undefined && limit !== null;
 
@@ -57,7 +67,7 @@ export const getActiveListings = async (filters = {}) => {
       prisma.listing.findMany({
         where,
         include: LISTING_INCLUDE,
-        orderBy: { createdAt: 'desc' },
+        orderBy,
         skip,
         take: limitNum
       }),
@@ -78,7 +88,7 @@ export const getActiveListings = async (filters = {}) => {
   const listings = await prisma.listing.findMany({
     where,
     include: LISTING_INCLUDE,
-    orderBy: { createdAt: 'desc' }
+    orderBy
   });
 
   return { data: listings };
