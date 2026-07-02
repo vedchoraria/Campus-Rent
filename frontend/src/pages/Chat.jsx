@@ -41,8 +41,7 @@ function Chat() {
     typingUsers,
     onlineUsers,
     selectConversation,
-    loadOlderMessages,
-    refreshConversations
+    loadOlderMessages
   } = useChat();
 
   const [draft, setDraft] = useState("");

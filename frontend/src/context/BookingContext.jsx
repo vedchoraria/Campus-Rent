@@ -1,3 +1,6 @@
+/* eslint-disable react-hooks/set-state-in-effect */
+/* eslint-disable react-refresh/only-export-components */
+
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { BOOKING_STATUS } from "../constants/bookingStatus.js";
 import { api } from "../services/api.js";

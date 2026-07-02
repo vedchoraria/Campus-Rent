@@ -13,7 +13,6 @@ function Profile() {
   const [profileError, setProfileError] = useState(null);
 
   const isOwner = Boolean(!id) && Boolean(authUser);
-  const isLoading = profileLoading && !profileUser;
 
   // Fetch user profile from API
   useEffect(() => {

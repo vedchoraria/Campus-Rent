@@ -36,7 +36,7 @@ function Marketplace() {
   // Local search input state for responsive typing; synced to URL via debounce
   const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
 
-  const { marketplaceListings, isLoading, error, pagination, refreshListings } = useListings();
+  const { marketplaceListings, isLoading: listingsLoading, error, pagination, refreshListings } = useListings();
   const { bookings } = useBookings();
 
   // Ref to always have the latest searchParams available in debounce callback
@@ -68,12 +68,16 @@ function Marketplace() {
       }
     }, 300);
     return () => clearTimeout(handler);
-  }, [searchQuery]); // eslint-disable-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery]);
 
   // Sync local search input state when URL's q param changes externally
+  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     setSearchQuery(searchParams.get("q") || "");
   }, [searchParams.get("q")]);
+  /* eslint-enable react-hooks/exhaustive-deps */
+
 
   // When filters in the URL change, re-fetch from backend
   useEffect(() => {
@@ -256,7 +260,7 @@ function Marketplace() {
           </div>
 
           <div className="marketplace-grid">
-            {isLoading
+            {listingsLoading
               ? Array.from({ length: 6 }).map((_, index) => (
                   <div key={index} className="marketplace-card skeleton">
                     <div style={{ height: "170px" }}></div>

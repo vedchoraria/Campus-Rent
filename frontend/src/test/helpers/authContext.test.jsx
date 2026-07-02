@@ -79,10 +79,8 @@ describe('AuthContext', () => {
   });
 
   it('ignores login call with missing data', async () => {
-    const testUser = userEvent.setup();
     renderWithProvider();
     // Login with empty object should be ignored because user data is missing
-    const loginButton = screen.getByTestId('btn-login');
     // Re-render to verify state persists as not logged in
     expect(screen.getByTestId('auth-state').textContent).toBe('Not logged in');
   });

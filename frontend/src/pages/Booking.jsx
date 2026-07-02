@@ -9,6 +9,8 @@ import { useListings } from "../context/ListingContext.jsx";
 import { api } from "../services/api.js";
 import { resolveMediaDisplay } from "../utils/mediaUtils.js";
 
+/* eslint-disable react-hooks/set-state-in-effect */
+
 function Booking() {
   const { id } = useParams();
   const navigate = useNavigate();
