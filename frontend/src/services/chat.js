@@ -1,6 +1,13 @@
 import { io } from 'socket.io-client';
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+// Derive the socket URL from VITE_API_URL's origin (same Express server for REST + Socket.IO)
+// This ensures the socket always connects to the same host/port as the REST API,
+// both in local dev and production. VITE_SOCKET_URL can override if needed.
+const apiUrl = import.meta.env.VITE_API_URL;
+const defaultSocketUrl = apiUrl
+  ? new URL(apiUrl).origin
+  : 'http://localhost:4000';
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || defaultSocketUrl;
 
 let socket = null;
 let listeners = new Map();

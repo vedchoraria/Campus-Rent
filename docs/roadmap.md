@@ -476,13 +476,13 @@ Complete the transition of remaining frontend-simulated state to fully backend-d
 
 ## 17.1 Remove localStorage Fallback
 
-* Eliminate initial-page-load dependency on localStorage booking state
-* Verify dashboard renders correctly during API fetch latency
+* Eliminate initial-page-load dependency on localStorage booking state ✅
+* Verify dashboard renders correctly during API fetch latency ✅
 
 Status:
 
 ```txt
-in progress
+resolved — no localStorage booking fallback exists; BookingContext fetches directly from backend on mount
 ```
 
 ---

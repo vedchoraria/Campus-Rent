@@ -48,6 +48,8 @@ function Chat() {
   const [draft, setDraft] = useState("");
   const [search, setSearch] = useState("");
   const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState(null);
+  const sendErrorTimerRef = useRef(null);
   const endRef = useRef(null);
   const threadRef = useRef(null);
   const joinedRef = useRef(false);
@@ -56,12 +58,11 @@ function Chat() {
   const lastTypingEmitRef = useRef(0);
   const typingInactivityRef = useRef(null);
 
-  // Clean up typing inactivity timeout on unmount
+  // Clean up timers on unmount
   useEffect(() => {
     return () => {
-      if (typingInactivityRef.current) {
-        clearTimeout(typingInactivityRef.current);
-      }
+      clearTimeout(typingInactivityRef.current);
+      clearTimeout(sendErrorTimerRef.current);
     };
   }, []);
 
@@ -141,11 +142,16 @@ function Chat() {
     lastTypingEmitRef.current = 0;
 
     setSending(true);
+    setSendError(null);
     try {
       await sendMessage(activeConversationId, text);
       setDraft("");
     } catch (err) {
       console.error("Failed to send message:", err);
+      setSendError(err.message || "Failed to send message. Check your connection.");
+      // Auto-clear error after 5 seconds; clear any previous timer first
+      clearTimeout(sendErrorTimerRef.current);
+      sendErrorTimerRef.current = setTimeout(() => setSendError(null), 5000);
     } finally {
       setSending(false);
     }
@@ -357,6 +363,11 @@ function Chat() {
 
         {activeConversationId ? (
           <footer className="chat-input-area">
+            {sendError && (
+              <div className="chat-send-error">
+                ⚠️ {sendError}
+              </div>
+            )}
             <input
               type="text"
               placeholder="Type a message..."
