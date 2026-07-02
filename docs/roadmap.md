@@ -516,7 +516,7 @@ Goal:
 Status:
 
 ```txt
-tracked
+resolved
 ```
 
 ---

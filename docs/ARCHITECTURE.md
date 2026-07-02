@@ -280,4 +280,4 @@ When a user is on the Marketplace, applies filters, and navigates to page 2, the
 **Production-Scale Solution:**  
 Use URL search params (`/marketplace?q=camera&category=Tech&page=2&sort=price_asc`) as the canonical filter state source. React Router's `useSearchParams` can synchronize filter state with the URL, making it bookmarkable and resilient to navigation.
 
-**Status:**  `Unresolved — tracked as technical debt`
+**Status:**  `Resolved — filter/pagination state synchronized to URL search params via useSearchParams. Marketplace filters are now bookmarkable and resilient to navigation (e.g., navigating to item details and back preserves the exact filter state).`

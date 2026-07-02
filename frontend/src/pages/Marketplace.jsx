@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 
 const categories = [
   { name: "All" },
@@ -24,56 +25,105 @@ import { useBookings } from "../context/BookingContext.jsx";
 import { BOOKING_STATUS } from "../constants/bookingStatus.js";
 
 function Marketplace() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [activeCategory, setActiveCategory] = useState("All");
-  const [activeLocation, setActiveLocation] = useState("All Locations");
-  const [sortOption, setSortOption] = useState("Newest");
-  const [page, setPage] = useState(1);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Read all filter values from URL search params (canonical source)
+  const activeCategory = searchParams.get("category") || "All";
+  const activeLocation = searchParams.get("location") || "All Locations";
+  const sortOption = searchParams.get("sort") || "Newest";
+  const page = parseInt(searchParams.get("page") || "1", 10);
+
+  // Local search input state for responsive typing; synced to URL via debounce
+  const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
 
   const { marketplaceListings, isLoading, error, pagination, refreshListings } = useListings();
   const { bookings } = useBookings();
 
+  // Ref to always have the latest searchParams available in debounce callback
+  const searchParamsRef = useRef(searchParams);
+  searchParamsRef.current = searchParams;
+
   // Ref to skip the initial effect call since ListingContext already fetches on mount
   const initialFetchDone = useRef(false);
 
-  // Debounce search input
+  // Debounce search input → URL search params
   useEffect(() => {
     const handler = setTimeout(() => {
-      setDebouncedSearch(searchQuery);
+      const currentParams = searchParamsRef.current;
+      const next = new URLSearchParams(currentParams);
+      if (searchQuery) {
+        next.set("q", searchQuery);
+      } else {
+        next.delete("q");
+      }
+      // Reset to page 1 when search changes
+      next.delete("page");
+      // Only update URL if the q param actually changed (prevents loops)
+      if (next.get("q") !== currentParams.get("q")) {
+        setSearchParams(next, { replace: true });
+      }
     }, 300);
     return () => clearTimeout(handler);
-  }, [searchQuery]);
+  }, [searchQuery]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // When search, category, location, or page changes, re-fetch from backend with params
-  // Skip the first call because ListingContext already fetches on mount
+  // Sync local search input state when URL's q param changes externally
+  useEffect(() => {
+    setSearchQuery(searchParams.get("q") || "");
+  }, [searchParams.get("q")]);
+
+  // When filters in the URL change, re-fetch from backend
   useEffect(() => {
     if (!initialFetchDone.current) {
       initialFetchDone.current = true;
-      return;
+      // If there are URL params on initial mount, override the default empty fetch
+      const hasParams = Array.from(searchParams.keys()).length > 0;
+      if (!hasParams) return; // ListingContext already fetched with defaults
     }
 
     const controller = new AbortController();
     const params = {};
-    if (debouncedSearch) params.q = debouncedSearch;
-    if (activeCategory !== "All") params.category = activeCategory;
-    if (sortOption === "Price: Low to High") params.sortBy = "price_asc";
-    else if (sortOption === "Rating") params.sortBy = "rating";
-    if (activeLocation !== "All Locations") params.location = activeLocation;
-    params.page = page;
+    const q = searchParams.get("q");
+    const category = searchParams.get("category");
+    const location = searchParams.get("location");
+    const sort = searchParams.get("sort");
+    const p = searchParams.get("page");
+
+    if (q) params.q = q;
+    if (category) params.category = category;
+    if (location) params.location = location;
+    if (sort === "Price: Low to High") params.sortBy = "price_asc";
+    else if (sort === "Rating") params.sortBy = "rating";
+    if (p) params.page = parseInt(p, 10);
     params.limit = PAGE_SIZE;
 
     refreshListings(controller.signal, params);
     return () => controller.abort();
-  }, [debouncedSearch, activeCategory, activeLocation, page, sortOption, refreshListings]);
+  }, [searchParams, refreshListings]);
 
-  // Reset to page 1 when filters change
-  useEffect(() => {
-    setPage(1);
-  }, [debouncedSearch, activeCategory, activeLocation, sortOption]);
+  // Helpers to update individual URL params
+  const updateFilter = (key, value) => {
+    const next = new URLSearchParams(searchParams);
+    if (value === "All" || value === "All Locations" || !value) {
+      next.delete(key);
+    } else {
+      next.set(key, value);
+    }
+    // Reset to page 1 on any filter change
+    next.delete("page");
+    setSearchParams(next, { replace: true });
+  };
 
-  // Apply ongoing booking overlays (sort and location filter are now server-side)
+  const goToPage = (newPage) => {
+    const next = new URLSearchParams(searchParams);
+    if (newPage <= 1) {
+      next.delete("page");
+    } else {
+      next.set("page", String(newPage));
+    }
+    setSearchParams(next, { replace: true });
+  };
+
+  // Apply ongoing booking overlays
   const displayListings = useMemo(() => {
     const ongoingByItemId = bookings
       .filter((booking) =>
@@ -96,9 +146,8 @@ function Marketplace() {
       }));
   }, [bookings, marketplaceListings]);
 
-  const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
-  };
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const toggleSidebar = () => setIsSidebarOpen((o) => !o);
 
   const totalPages = pagination?.totalPages || 1;
 
@@ -136,7 +185,7 @@ function Marketplace() {
                 <button
                   key={cat.name}
                   type="button"
-                  onClick={() => setActiveCategory(cat.name)}
+                  onClick={() => updateFilter("category", cat.name)}
                   className={`marketplace-category ${
                     activeCategory === cat.name ? "active" : ""
                   }`}
@@ -156,7 +205,7 @@ function Marketplace() {
                     type="radio"
                     name="location"
                     checked={activeLocation === loc}
-                    onChange={() => setActiveLocation(loc)}
+                    onChange={() => updateFilter("location", loc === "All Locations" ? "" : loc)}
                   />
                   <span>{loc}</span>
                 </label>
@@ -169,7 +218,7 @@ function Marketplace() {
             <select
               className="marketplace-sort-select"
               value={sortOption}
-              onChange={(e) => setSortOption(e.target.value)}
+              onChange={(e) => updateFilter("sort", e.target.value)}
             >
               <option value="Newest">Newest</option>
               <option value="Price: Low to High">Price: Low to High</option>
@@ -240,7 +289,7 @@ function Marketplace() {
                 className="btn outline"
                 style={{ padding: '8px 16px', fontSize: '14px' }}
                 disabled={page <= 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                onClick={() => goToPage(page - 1)}
               >
                 ← Previous
               </button>
@@ -251,7 +300,7 @@ function Marketplace() {
                 className="btn outline"
                 style={{ padding: '8px 16px', fontSize: '14px' }}
                 disabled={page >= totalPages}
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                onClick={() => goToPage(page + 1)}
               >
                 Next →
               </button>
