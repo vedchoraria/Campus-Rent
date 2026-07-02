@@ -41,7 +41,11 @@ function Marketplace() {
 
   // Ref to always have the latest searchParams available in debounce callback
   const searchParamsRef = useRef(searchParams);
-  searchParamsRef.current = searchParams;
+
+  // Sync the ref after render so the debounce callback always reads current URL params
+  useEffect(() => {
+    searchParamsRef.current = searchParams;
+  }, [searchParams]);
 
   // Ref to skip the initial effect call since ListingContext already fetches on mount
   const initialFetchDone = useRef(false);
