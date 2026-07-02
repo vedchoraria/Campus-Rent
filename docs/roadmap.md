@@ -197,7 +197,7 @@ fully backend-driven
 
 ---
 
-# Phase 8 — Dashboard Read Migration ✅ (Current Major Milestone)
+# Phase 8 — Dashboard Read Migration ✅
 
 Completed:
 
@@ -214,14 +214,156 @@ Completed:
 * localStorage fallback strategy
 * lifecycle grouping support
 
-Current State:
+---
 
-```txt id="rm13"
-READS are backend-driven
-MUTATIONS are still frontend-simulated
+# Phase 9 — Authentication System ✅
+
+Completed:
+
+* JWT signup/login with bcrypt password hashing
+* Rate-limited auth endpoints (10 req / 15 min)
+* `requireAuth` middleware with token validation
+* Auto-logout on 401 via API response interceptor
+* `@nitrr.ac.in` campus email scope enforcement
+
+Status:
+
+```txt
+stable
 ```
 
-VERY important distinction.
+---
+
+# Phase 10 — Booking Lifecycle APIs ✅
+
+Completed:
+
+```txt
+POST /api/bookings
+PATCH /api/bookings/:bookingId/status
+```
+
+Features:
+
+* Overlap validation against approved/active bookings
+* Price and deposit snapshots at creation time
+* Full 8-state lifecycle engine
+* Role-based transition guards (owner vs. borrower)
+* Cancellation audit trail (`cancelledBy`, `cancelledAt`)
+* Self-booking prevention
+* Frontend BookingContext now calls backend for ALL mutations
+
+Status:
+
+```txt
+stable
+```
+
+---
+
+# Phase 11 — Admin & Role-Based Access Control ✅
+
+Completed:
+
+* `ADMIN` role + `adminOnly` middleware
+* Admin dashboard: platform stats, user management, booking oversight
+* Listing moderation: hide/restore endpoints
+
+Status:
+
+```txt
+stable
+```
+
+---
+
+# Phase 12 — Real-Time Chat ✅
+
+Completed:
+
+* Socket.IO with per-booking conversation rooms
+* JWT-authenticated socket handshake
+* Presence tracking (online/offline)
+* Typing indicators
+* Unread message counts
+* Conversation list and message history APIs
+
+Status:
+
+```txt
+stable but single-instance (no Redis adapter)
+```
+
+---
+
+# Phase 13 — Cloudinary Image Uploads ✅
+
+Completed:
+
+* Multer middleware for file handling
+* Cloudinary SDK integration
+* `POST /api/listings/upload-image` endpoint
+
+Status:
+
+```txt
+stable
+```
+
+---
+
+# Phase 14 — Testing & CI/CD ✅
+
+Completed:
+
+* Vitest + Supertest integration test suite
+* React Testing Library + Vitest frontend tests
+* Booking lifecycle integration tests (real Postgres)
+* GitHub Actions CI pipelines (backend + frontend)
+* Coverage reporting with thresholds
+
+Status:
+
+```txt
+stable
+```
+
+---
+
+# Phase 15 — Observability, Security & Documentation ✅
+
+Completed:
+
+* Structured logging (Pino) with request-scoped `requestId`
+* Sentry error monitoring
+* Helmet security headers (CSP, HSTS, XSS, etc.)
+* Zod input validation on all write endpoints
+* OpenAPI documentation served at `/api/docs`
+* Migrated auth service from raw SQL to Prisma
+
+Status:
+
+```txt
+stable
+```
+
+---
+
+# Phase 16 — Production Deployment ✅
+
+Completed:
+
+* Frontend deployed to Vercel
+* Backend deployed to Render
+* Database hosted on Neon PostgreSQL
+* Environment-aware CORS configuration
+* Production security headers
+
+Status:
+
+```txt
+deployed
+```
 
 ---
 
@@ -249,17 +391,16 @@ Systems:
 
 Still transitional:
 
-* booking approval
-* rejection
-* cancellation
-* return flows
-* booking creation
+* `localStorage` fallback for booking state on initial page load
+* Some frontend-only edge cases in the dashboard lifecycle tabs
 
 These still rely partly on:
 
 ```txt id="rm15"
 frontend context simulation
 ```
+
+Note: All booking write operations now call the backend API. The remaining hybrid state is read-path only and affects initial hydration timing, not data correctness.
 
 ---
 
@@ -324,212 +465,140 @@ Now ordered PROPERLY.
 
 ---
 
-# Phase 9 — Booking Mutation Stabilization 🚧
+# Phase 17 — Frontend Lifecycle Transition Completion 🚧
 
 ## NEXT MAJOR PHASE
 
 Goal:
-Move lifecycle mutations to backend safely.
+Complete the transition of remaining frontend-simulated state to fully backend-driven.
 
 ---
 
-## 9.1 Booking Creation API
+## 17.1 Remove localStorage Fallback
 
-Implement:
-
-```txt id="rm23"
-POST /api/bookings
-```
-
-Requirements:
-
-* overlap validation
-* snapshots
-* pending requests
-* date validation
-* pickup metadata
+* Eliminate initial-page-load dependency on localStorage booking state
+* Verify dashboard renders correctly during API fetch latency
 
 Status:
 
-```txt id="rm24"
-planned
+```txt
+in progress
 ```
 
 ---
 
-## 9.2 Booking Lifecycle APIs
+## 17.2 Eliminate Duplicated Lifecycle Logic
 
-Implement:
-
-```txt id="rm25"
-PATCH approve
-PATCH reject
-PATCH cancel
-PATCH return
-```
+* Remove any remaining frontend-only status normalization that duplicates backend logic
+* Ensure all booking status transitions go through the API
 
 Status:
 
-```txt id="rm26"
-not started
+```txt
+in progress
 ```
 
 ---
 
-## 9.3 Dashboard Synchronization Stabilization
+# Phase 18 — URL-Synchronized Filter State 🚧
+
+Tracker:
+
+```txt
+ARCHITECTURE.md §8.2
+```
 
 Goal:
 
-* remove duplicated lifecycle logic
-* reduce hybrid state
-* stabilize backend refresh behavior
+* Move marketplace filter/pagination state to URL search params
+* Use `useSearchParams` for bookmarkable, navigation-resilient filters
 
 Status:
 
-```txt id="rm27"
-partially complete
+```txt
+tracked
 ```
 
 ---
 
-# Phase 10 — Authentication System 🚧
-
-IMPORTANT:
-Auth intentionally postponed.
-
-Reason:
-
-```txt id="rm28"
-booking lifecycle architecture needed stabilization first
-```
-
-Planned:
-
-* JWT auth
-* protected routes
-* login/signup
-* session persistence
-
-Status:
-
-```txt id="rm29"
-not started
-```
-
----
-
-# Phase 11 — Media & Storage 🚧
-
-Planned:
-
-* Cloudinary/Supabase Storage
-* real uploads
-* image optimization
-
-Current:
-
-```txt id="rm30"
-seed/static URLs only
-```
-
----
-
-# Phase 12 — Notifications & Realtime 🚧
+# Phase 19 — Notifications & Realtime Alerts 🚧
 
 Possible future:
 
-* booking alerts
-* approval notifications
-* realtime lifecycle updates
+* Booking lifecycle push notifications
+* Approval/rejection alerts via Socket.IO
+* Email notifications (if scope expands)
 
 Status:
 
-```txt id="rm31"
+```txt
 future scope
 ```
 
 ---
 
-# Phase 13 — Payments 🚧
+# Phase 20 — Socket.IO Horizontal Scaling 🚧
 
-Potential:
+Required once the app runs multiple backend instances:
 
-* Razorpay/Stripe
-* deposits
-* payment verification
+* Redis adapter for Socket.IO
+* Shared presence/typing state across processes
 
 Status:
 
-```txt id="rm32"
+```txt
 future scope
 ```
 
 ---
 
-# Phase 14 — Deployment & DevOps 🚧
+# Phase 21 — Payments 🚧
 
-Still needed:
+Explicitly deprioritized:
 
-* frontend deployment
-* backend deployment
-* environment management
-* production config
-* CI/CD
-* monitoring
+```txt
+Razorpay/Stripe would add PCI surface, webhook complexity,
+and refund/dispute logic — 1+ weeks of careful work.
+Campus-email trust model makes off-platform payment viable.
+```
 
-Potential:
+Status:
 
-```txt id="rm33"
-Vercel + Railway/Render
+```txt
+explicitly deprioritized
 ```
 
 ---
 
 # 5. CURRENT PRIORITY ORDER 🎯
 
-This is VERY important.
-
 ---
 
 # Immediate Priority
 
-## Stabilize dashboard synchronization
+## Phase 17 — Complete frontend lifecycle migration
 
 Meaning:
 
-* test backend reads thoroughly
-* reduce hybrid inconsistencies
-* verify lifecycle grouping
+* Remove localStorage fallback for booking state
+* Eliminate remaining duplicated lifecycle logic
+* Verify full dashboard correctness with backend-only reads
 
 ---
 
 # Next Priority
 
-## Booking mutations
+## Phase 18 — URL-synchronized filter state
 
-Specifically:
-
-```txt id="rm34"
-POST /api/bookings
-```
-
-then:
-
-```txt id="rm35"
-approve/reject/cancel flows
-```
+Resolve ARCHITECTURE.md §8.2: make marketplace filters bookmarkable and navigation-resilient.
 
 ---
 
 # THEN
 
-## Authentication
+## Phase 19+ — Future scope items
 
-ONLY after:
-
-```txt id="rm36"
-booking persistence becomes stable
-```
+Only after the above two phases are stable.
 
 ---
 
@@ -574,18 +643,17 @@ Neon PostgreSQL
 The hardest remaining problem is:
 
 ```txt id="rm40"
-transitioning booking lifecycle mutations
-from frontend simulation
-to backend persistence
+eliminating the last traces of frontend-simulated state
+so the frontend is a pure read/act layer over the backend
 ```
 
 WITHOUT:
 
-* breaking dashboard UX
-* duplicating state
-* creating synchronization bugs
+* breaking dashboard UX during the transition
+* introducing loading-state regressions
+* creating synchronization bugs on initial page load
 
-This is the current core architecture challenge.
+This is the remaining core architecture challenge.
 
 ---
 
@@ -594,16 +662,15 @@ This is the current core architecture challenge.
 CampusRent is now approximately:
 
 ```txt id="rm41"
-65–75% architecturally complete
+90% architecturally complete
 ```
 
-Core foundations are now strong.
+Core foundations are strong.
 
 Remaining work is mostly:
 
-* lifecycle persistence
-* auth
-* deployment
-* production hardening
+* frontend lifecycle transition completion
+* URL filter state persistence
+* future-scope features (notifications, scaling)
 
-NOT initial scaffolding anymore.
+No longer initial scaffolding — this is now a production-deployed full-stack application with real-time chat, RBAC/admin, CI/CD, and comprehensive tests.

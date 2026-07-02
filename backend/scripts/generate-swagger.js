@@ -1,3 +1,5 @@
+// One-time codegen: regenerates src/config/swagger.js from the OpenAPI spec defined below.
+// Run via: node scripts/generate-swagger.js
 import fs from 'fs';
 
 const spec = {
